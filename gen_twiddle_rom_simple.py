@@ -1,8 +1,14 @@
 #!/usr/bin/python
 from math import *
+import sys
 
-N = 4;
-twiddleBits = 12;
+if len(sys.argv) < 3:
+	print 'usage: %s SIZE BITS' % sys.argv[0]
+	exit(1)
+
+N = int(sys.argv[1]);
+twiddleBits = int(sys.argv[2]);
+
 reducedBits = False;
 # if reducedBits is true, output fits in a twiddleBits bit signed integer.
 # if reducedBits is false, output fits in a twiddleBits+1 bit signed integer.

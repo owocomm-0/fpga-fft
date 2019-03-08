@@ -1,8 +1,13 @@
 #!/usr/bin/python
 from math import *
+import sys
 
-N = 16*1024;
-width = 16;
+if len(sys.argv) < 3:
+	print 'usage: %s SIZE BITS' % sys.argv[0]
+	exit(1)
+
+N = int(sys.argv[1]);
+width = int(sys.argv[2]);
 
 size = N/8;
 romDepthOrder = int(ceil(log(size)/log(2.)));

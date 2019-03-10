@@ -415,6 +415,7 @@ fft2_scale_div_n = FFTBase(2, 'fft2_serial', 'SCALE_DIV_N', 6)
 
 
 fft4_scale_none = FFTConfiguration(4, fft2_scale_none, fft2_scale_none);
+fft4_scale_div_sqrt_n = FFTConfiguration(4, fft2_scale_none, fft2_scale_div_n);
 fft4_scale_div_n = FFTConfiguration(4, fft2_scale_div_n, fft2_scale_div_n);
 
 
@@ -511,6 +512,18 @@ fft1024_2 = \
 		16); # twiddleBits
 
 
+fft1024_3 = \
+	FFTConfiguration(1024,
+		FFTConfiguration(64,
+			FFTConfiguration(16, 
+				fft4_scale_none,
+				fft4_large_scale_none),
+			fft4_scale_div_sqrt_n),
+		FFTConfiguration(16, 
+			fft4_large_scale_div_n,
+			fft4_scale_div_n),
+		16); # twiddleBits
+
 fft4096 = \
 	FFTConfiguration(4096,
 		FFTConfiguration(64,
@@ -543,6 +556,15 @@ fft4096_2 = \
 			fft4_scale_div_n),
 		16); # twiddleBits
 
+fft8192 = \
+	FFTConfiguration(8192,
+		FFTConfiguration(128,
+			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_none),
+			FFTConfiguration(8,  fft4_scale_none, fft2_scale_div_n)),
+		FFTConfiguration(64, 
+			FFTConfiguration(16,  fft4_large_scale_div_sqrt_n, fft4_scale_div_n),
+			fft4_scale_div_n),
+		16); # twiddleBits
 
 fft16k = \
 	FFTConfiguration(16*1024,

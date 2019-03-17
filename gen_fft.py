@@ -30,6 +30,18 @@ def bitOrderNTimes(bitOrder, n):
 		res = [res[x] for x in bitOrder]
 	return res
 
+def addIndent(s):
+	ret = []
+	for line in s.split('\n'):
+		ret.append('\t' + line)
+	return '\n'.join(ret)
+
+def commentOut(s):
+	ret = []
+	for line in s.split('\n'):
+		ret.append('--' + line)
+	return '\n'.join(ret)
+
 class BitPermutation:
 	def __init__(self, bitOrder):
 		self.bitOrder = bitOrder
@@ -88,6 +100,14 @@ class FFTBase:
 		self.dataBits = 'dataBits'
 		self.imports = [entity]
 
+	def configurationStr(self):
+		clsName = self.__class__.__name__
+		res = "%s(%d, '%s', '%s', %d)" % (clsName, self.N, self.entity, self.scale, self.delay1)
+		return res
+	
+	def descriptionStr(self):
+		return "%d: base, '%s', scale='%s', delay=%d" % (self.N, self.entity, self.scale, self.delay1)
+	
 	# returns the mapping from temporal order to natural order; 
 	# inputBitOrder()[0] is the source address of bit 0 in the output of the mapping.
 	# e.g. bitOrder of [1,2,3,0] will transform 0b0001 to 0b1000
@@ -160,6 +180,21 @@ class FFTConfiguration:
 			self.reorderDelay = sub2.N + self.reorderAdditiveDelay
 		else:
 			self.sub2Transposer = False
+	
+	def configurationStr(self):
+		clsName = self.__class__.__name__
+		
+		res = '%s(%d, \n' % (clsName, self.N)
+		res += addIndent(self.sub1.configurationStr()) + ',\n'
+		res += addIndent(self.sub2.configurationStr()) + ',\n'
+		res += 'twiddleBits=%d)' % self.twiddleBits
+		return res
+	
+	def descriptionStr(self):
+		res = '%d: twiddleBits=%d, delay=%d\n' % (self.N, self.twiddleBits, self.delay())
+		res += addIndent(self.sub1.descriptionStr()) + '\n'
+		res += addIndent(self.sub2.descriptionStr())
+		return res
 	
 	def delay(self):
 		d = self.sub1.delay() + self.N + self.multDelay + self.sub2.delay()
@@ -600,5 +635,17 @@ if len(sys.argv) < 2:
 	print 'see source code of this program for a list of instances or add your own instance'
 	exit(1)
 
-print genVHDL(globals()[sys.argv[1]])
+instanceName = sys.argv[1]
+instance = globals()[instanceName]
+
+vhdlCode = '-- instance name: ' + instanceName + '\n\n'
+vhdlCode += '-- layout:\n'
+vhdlCode += commentOut(instance.descriptionStr())
+vhdlCode += '\n\n'
+
+print vhdlCode
+print genVHDL(instance)
+
+print '\n-- instantiation (python):\n'
+print commentOut(instance.configurationStr())
 

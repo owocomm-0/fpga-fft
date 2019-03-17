@@ -618,6 +618,27 @@ fft16k = \
 		fft4_scale_div_n,
 		16);
 
+fft16k_2 = \
+	FFTConfiguration(16*1024,
+		FFTConfiguration(128,
+			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_none),
+			FFTConfiguration(8,  fft4_scale_none, fft2_scale_none)),
+		FFTConfiguration(128,
+			FFTConfiguration(16,  fft4_scale_div_n, fft4_large_scale_div_n),
+			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)),
+		16);
+
+fft32k = \
+	FFTConfiguration(32*1024,
+		FFTConfiguration(256,
+			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_none),
+			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_div_sqrt_n)),
+		FFTConfiguration(128,
+			FFTConfiguration(16,  fft4_scale_div_n, fft4_large_scale_div_n),
+			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)),
+		16);
+
+
 #print fft256.inputBitOrder()
 #print fft256.outputBitOrder()
 

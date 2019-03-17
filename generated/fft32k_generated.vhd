@@ -1,18 +1,18 @@
--- instance name: fft16k_2
+-- instance name: fft32k
 
 -- layout:
---16384: twiddleBits=16, delay=16996
---	128: twiddleBits=12, delay=239
+--32768: twiddleBits=16, delay=33529
+--	256: twiddleBits=12, delay=388
 --		16: twiddleBits=12, delay=55
 --			4: twiddleBits=12, delay=22
 --				2: base, 'fft2_serial', scale='SCALE_NONE', delay=6
 --				2: base, 'fft2_serial', scale='SCALE_NONE', delay=6
 --			4: base, 'fft4_serial3', scale='SCALE_NONE', delay=11
---		8: twiddleBits=12, delay=42
+--		16: twiddleBits=12, delay=55
 --			4: twiddleBits=12, delay=22
 --				2: base, 'fft2_serial', scale='SCALE_NONE', delay=6
 --				2: base, 'fft2_serial', scale='SCALE_NONE', delay=6
---			2: base, 'fft2_serial', scale='SCALE_NONE', delay=6
+--			4: base, 'fft4_serial3', scale='SCALE_DIV_SQRT_N', delay=11
 --	128: twiddleBits=12, delay=239
 --		16: twiddleBits=12, delay=55
 --			4: twiddleBits=12, delay=22
@@ -38,40 +38,41 @@ use work.fft3step_bram_generic3;
 use work.twiddleGenerator;
 use work.transposer;
 use work.reorderBuffer;
-use work.twiddleRom16384;
-use work.twiddleRom128;
+use work.twiddleRom32768;
+use work.twiddleRom256;
 use work.twiddleGenerator16;
 use work.twiddleGenerator4;
 use work.fft2_serial;
 use work.fft4_serial3;
+use work.twiddleRom128;
 use work.twiddleGenerator8;
 
--- data input bit order: (13 downto 0) [0,1,3,2,6,5,4,13,12,11,10,9,8,7]
--- data output bit order: (13 downto 0) [0,1,2,4,3,5,6,7,8,9,11,10,12,13]
+-- data input bit order: (14 downto 0) [0,1,3,2,7,6,5,4,14,13,12,11,10,9,8]
+-- data output bit order: (14 downto 0) [0,1,2,4,3,5,6,8,7,9,10,12,11,13,14]
 -- phase should be 0,1,2,3,4,5,6,...
--- delay is 16996
-entity fft16384_generated is
+-- delay is 33529
+entity fft32768_generated is
 	generic(dataBits: integer := 24);
 	port(clk: in std_logic;
 		din: in complex;
-		phase: in unsigned(14-1 downto 0);
+		phase: in unsigned(15-1 downto 0);
 		dout: out complex
 		);
 end entity;
-architecture ar of fft16384_generated is
-	-- ====== FFT instance 'top' (N=16384) ======
-	constant top_N: integer := 16384;
+architecture ar of fft32768_generated is
+	-- ====== FFT instance 'top' (N=32768) ======
+	constant top_N: integer := 32768;
 	constant top_twiddleBits: integer := 16;
 	constant top_twiddleDelay: integer := 7;
-	constant top_order: integer := 14;
-	constant top_delay: integer := 16996;
+	constant top_order: integer := 15;
+	constant top_delay: integer := 33529;
 
-		-- ====== FFT instance 'A' (N=128) ======
-		constant A_N: integer := 128;
+		-- ====== FFT instance 'A' (N=256) ======
+		constant A_N: integer := 256;
 		constant A_twiddleBits: integer := 12;
 		constant A_twiddleDelay: integer := 7;
-		constant A_order: integer := 7;
-		constant A_delay: integer := 239;
+		constant A_order: integer := 8;
+		constant A_delay: integer := 388;
 
 			-- ====== FFT instance 'AA' (N=16) ======
 			constant AA_N: integer := 16;
@@ -102,12 +103,12 @@ architecture ar of fft16384_generated is
 				constant AAB_order: integer := 2;
 				constant AAB_delay: integer := 11;
 
-			-- ====== FFT instance 'AB' (N=8) ======
-			constant AB_N: integer := 8;
+			-- ====== FFT instance 'AB' (N=16) ======
+			constant AB_N: integer := 16;
 			constant AB_twiddleBits: integer := 12;
 			constant AB_twiddleDelay: integer := 2;
-			constant AB_order: integer := 3;
-			constant AB_delay: integer := 42;
+			constant AB_order: integer := 4;
+			constant AB_delay: integer := 55;
 
 				-- ====== FFT instance 'ABA' (N=4) ======
 				constant ABA_N: integer := 4;
@@ -126,10 +127,10 @@ architecture ar of fft16384_generated is
 					constant ABAB_order: integer := 1;
 					constant ABAB_delay: integer := 6;
 
-				-- ====== FFT instance 'ABB' (N=2) ======
-				constant ABB_N: integer := 2;
-				constant ABB_order: integer := 1;
-				constant ABB_delay: integer := 6;
+				-- ====== FFT instance 'ABB' (N=4) ======
+				constant ABB_N: integer := 4;
+				constant ABB_order: integer := 2;
+				constant ABB_delay: integer := 11;
 
 		-- ====== FFT instance 'B' (N=128) ======
 		constant B_N: integer := 128;
@@ -198,7 +199,7 @@ architecture ar of fft16384_generated is
 
 	--=======================================
 
-	-- ====== FFT instance 'top' (N=16384) ======
+	-- ====== FFT instance 'top' (N=32768) ======
 	signal top_in, top_out, top_rbIn: complex;
 	signal top_phase: unsigned(top_order-1 downto 0);
 	signal top_bitPermIn,top_bitPermOut: unsigned(A_order-1 downto 0);
@@ -214,7 +215,7 @@ architecture ar of fft16384_generated is
 	signal top_rCnt: unsigned(3-1 downto 0);
 	signal top_rbInPhase: unsigned(B_order-1 downto 0);
 
-		-- ====== FFT instance 'A' (N=128) ======
+		-- ====== FFT instance 'A' (N=256) ======
 		signal A_in, A_out, A_rbIn: complex;
 		signal A_phase: unsigned(A_order-1 downto 0);
 		signal A_bitPermIn,A_bitPermOut: unsigned(AA_order-1 downto 0);
@@ -223,9 +224,9 @@ architecture ar of fft16384_generated is
 		signal A_twData: complex;
 		signal A_romAddr: unsigned(A_order-4 downto 0);
 		signal A_romData: std_logic_vector(A_twiddleBits*2-3 downto 0);
-		signal A_rP0: unsigned(3-1 downto 0);
-		signal A_rP1: unsigned(3-1 downto 0);
-		signal A_rP2: unsigned(3-1 downto 0);
+		signal A_rP0: unsigned(4-1 downto 0);
+		signal A_rP1: unsigned(4-1 downto 0);
+		signal A_rP2: unsigned(4-1 downto 0);
 		signal A_rCnt: unsigned(2-1 downto 0);
 		signal A_rbInPhase: unsigned(AB_order-1 downto 0);
 
@@ -261,7 +262,7 @@ architecture ar of fft16384_generated is
 				signal AAB_in, AAB_out: complex;
 				signal AAB_phase: unsigned(2-1 downto 0);
 
-			-- ====== FFT instance 'AB' (N=8) ======
+			-- ====== FFT instance 'AB' (N=16) ======
 			signal AB_in, AB_out, AB_rbIn: complex;
 			signal AB_phase: unsigned(AB_order-1 downto 0);
 			signal AB_bitPermIn,AB_bitPermOut: unsigned(ABA_order-1 downto 0);
@@ -289,9 +290,9 @@ architecture ar of fft16384_generated is
 					signal ABAB_in, ABAB_out: complex;
 					signal ABAB_phase: unsigned(1-1 downto 0);
 
-				-- ====== FFT instance 'ABB' (N=2) ======
+				-- ====== FFT instance 'ABB' (N=4) ======
 				signal ABB_in, ABB_out: complex;
-				signal ABB_phase: unsigned(1-1 downto 0);
+				signal ABB_phase: unsigned(2-1 downto 0);
 
 		-- ====== FFT instance 'B' (N=128) ======
 		signal B_in, B_out, B_rbIn: complex;
@@ -375,7 +376,7 @@ begin
 	top_in <= din;
 	top_phase <= phase;
 	dout <= top_out;
-	-- ====== FFT instance 'top' (N=16384) ======
+	-- ====== FFT instance 'top' (N=32768) ======
 	top_core: entity fft3step_bram_generic3
 		generic map(
 			dataBits=>dataBits,
@@ -397,10 +398,10 @@ begin
 	A_in <= top_in;
 	top_out <= B_out;
 	A_phase <= top_phase(A_order-1 downto 0);
-	top_bitPermOut <= top_bitPermIn(0)&top_bitPermIn(1)&top_bitPermIn(2)&top_bitPermIn(4)&top_bitPermIn(3)&top_bitPermIn(5)&top_bitPermIn(6);
+	top_bitPermOut <= top_bitPermIn(1)&top_bitPermIn(0)&top_bitPermIn(2)&top_bitPermIn(3)&top_bitPermIn(5)&top_bitPermIn(4)&top_bitPermIn(6)&top_bitPermIn(7);
 	top_tw: entity twiddleGenerator generic map(top_twiddleBits, top_order)
 		port map(clk, top_twAddr, top_twData, top_romAddr, top_romData);
-	top_rom: entity twiddleRom16384 port map(clk, top_romAddr,top_romData);
+	top_rom: entity twiddleRom32768 port map(clk, top_romAddr,top_romData);
 	top_rP1 <= top_rP0(0)&top_rP0(1)&top_rP0(3)&top_rP0(2)&top_rP0(6)&top_rP0(5)&top_rP0(4) when top_rCnt(0)='1' else top_rP0;
 	top_rP2 <= top_rP1(4)&top_rP1(5)&top_rP1(2)&top_rP1(6)&top_rP1(0)&top_rP1(1)&top_rP1(3) when top_rCnt(1)='1' else top_rP1;
 	top_rP3 <= top_rP2(2)&top_rP2(5)&top_rP2(0)&top_rP2(4)&top_rP2(3)&top_rP2(1)&top_rP2(6) when top_rCnt(2)='1' else top_rP2;
@@ -412,7 +413,7 @@ begin
 		
 	B_phase <= top_rbInPhase-0;
 
-		-- ====== FFT instance 'A' (N=128) ======
+		-- ====== FFT instance 'A' (N=256) ======
 		A_core: entity fft3step_bram_generic3
 			generic map(
 				dataBits=>dataBits,
@@ -421,7 +422,7 @@ begin
 				subOrder2=>AB_order,
 				twiddleDelay=>A_twiddleDelay,
 				subDelay1=>AA_delay,
-				subDelay2=>50,
+				subDelay2=>71,
 				customSubOrder=>true)
 			port map(
 				clk=>clk, phase=>A_phase, phaseOut=>open,
@@ -437,12 +438,12 @@ begin
 		A_bitPermOut <= A_bitPermIn(1)&A_bitPermIn(0)&A_bitPermIn(2)&A_bitPermIn(3);
 		A_tw: entity twiddleGenerator generic map(A_twiddleBits, A_order)
 			port map(clk, A_twAddr, A_twData, A_romAddr, A_romData);
-		A_rom: entity twiddleRom128 port map(clk, A_romAddr,A_romData);
-		A_rP1 <= A_rP0(0)&A_rP0(1)&A_rP0(2) when A_rCnt(0)='1' else A_rP0;
-		A_rP2 <= A_rP1 when A_rCnt(1)='1' else A_rP1;
+		A_rom: entity twiddleRom256 port map(clk, A_romAddr,A_romData);
+		A_rP1 <= A_rP0(0)&A_rP0(1)&A_rP0(3)&A_rP0(2) when A_rCnt(0)='1' else A_rP0;
+		A_rP2 <= A_rP1(2)&A_rP1(3)&A_rP1(0)&A_rP1(1) when A_rCnt(1)='1' else A_rP1;
 			
 		A_rb: entity reorderBuffer
-			generic map(N=>3, dataBits=>dataBits, bitPermDelay=>0, dataPathDelay=>0)
+			generic map(N=>4, dataBits=>dataBits, bitPermDelay=>0, dataPathDelay=>0)
 			port map(clk, din=>A_rbIn, phase=>A_rbInPhase, dout=>AB_in,
 				bitPermIn=>A_rP0, bitPermCount=>A_rCnt, bitPermOut=>A_rP2);
 			
@@ -513,7 +514,7 @@ begin
 					generic map(dataBits=>dataBits, scale=>SCALE_NONE)
 					port map(clk=>clk, din=>AAB_in, phase=>AAB_phase, dout=>AAB_out);
 
-			-- ====== FFT instance 'AB' (N=8) ======
+			-- ====== FFT instance 'AB' (N=16) ======
 			AB_core: entity fft3step_bram_generic3
 				generic map(
 					dataBits=>dataBits,
@@ -522,7 +523,7 @@ begin
 					subOrder2=>ABB_order,
 					twiddleDelay=>AB_twiddleDelay,
 					subDelay1=>ABA_delay,
-					subDelay2=>6,
+					subDelay2=>11,
 					customSubOrder=>true)
 				port map(
 					clk=>clk, phase=>AB_phase, phaseOut=>open,
@@ -536,7 +537,7 @@ begin
 			AB_out <= ABB_out;
 			ABA_phase <= AB_phase(ABA_order-1 downto 0);
 			AB_bitPermOut <= AB_bitPermIn(0)&AB_bitPermIn(1);
-			AB_tw: entity twiddleGenerator8 port map(clk, AB_twAddr, AB_twData);
+			AB_tw: entity twiddleGenerator16 port map(clk, AB_twAddr, AB_twData);
 
 				-- ====== FFT instance 'ABA' (N=4) ======
 				ABA_core: entity fft3step_bram_generic3
@@ -573,9 +574,9 @@ begin
 						generic map(dataBits=>dataBits, scale=>SCALE_NONE)
 						port map(clk=>clk, din=>ABAB_in, phase=>ABAB_phase, dout=>ABAB_out);
 
-				-- ====== FFT instance 'ABB' (N=2) ======
-				ABB_inst: entity fft2_serial
-					generic map(dataBits=>dataBits, scale=>SCALE_NONE)
+				-- ====== FFT instance 'ABB' (N=4) ======
+				ABB_inst: entity fft4_serial3
+					generic map(dataBits=>dataBits, scale=>SCALE_DIV_SQRT_N)
 					port map(clk=>clk, din=>ABB_in, phase=>ABB_phase, dout=>ABB_out);
 
 		-- ====== FFT instance 'B' (N=128) ======
@@ -748,8 +749,8 @@ end ar;
 
 -- instantiation (python):
 
---FFTConfiguration(16384, 
---	FFTConfiguration(128, 
+--FFTConfiguration(32768, 
+--	FFTConfiguration(256, 
 --		FFTConfiguration(16, 
 --			FFTConfiguration(4, 
 --				FFTBase(2, 'fft2_serial', 'SCALE_NONE', 6),
@@ -757,12 +758,12 @@ end ar;
 --			twiddleBits=12),
 --			FFTBase(4, 'fft4_serial3', 'SCALE_NONE', 11),
 --		twiddleBits=12),
---		FFTConfiguration(8, 
+--		FFTConfiguration(16, 
 --			FFTConfiguration(4, 
 --				FFTBase(2, 'fft2_serial', 'SCALE_NONE', 6),
 --				FFTBase(2, 'fft2_serial', 'SCALE_NONE', 6),
 --			twiddleBits=12),
---			FFTBase(2, 'fft2_serial', 'SCALE_NONE', 6),
+--			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', 11),
 --		twiddleBits=12),
 --	twiddleBits=12),
 --	FFTConfiguration(128, 

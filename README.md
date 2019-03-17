@@ -7,13 +7,15 @@ Currently only supporting power-of-two sizes and fixed point data.
 
 Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher for common sizes.
 
-| Configuration               | LUTs | RAMB36  | DSP48E1 | Fmax    |
-| --------------------------- | ---- | ------- | ------- | ------- |
-| N=1024, 24 bit, XC7Z010-1   | 2890 | 2.5     | 28      | 388 MHz |
-| N=1024, 24 bit, XC7K160T-1  | 2885 | 2.5     | 28      | 505 MHz |
-| N=4096, 24 bit, XC7Z010-1   | 3359 | 8       | 36      | 380 MHz |
-| N=4096, 24 bit, XC7K160T-1  | 3362 | 8       | 36      | 483 MHz |
-| N=8192, 24 bit, XC7K160T-1  | 3562 | 15      | 40      | 490 MHz |
+| Configuration               | LUTs | RAMB36  | DSP48E1 | Fmax     |
+| --------------------------- | ---- | ------- | ------- | -------- |
+| N=1024, 24 bit, XC7Z010-1   | 2890 | 2.5     | 28      | 388 MHz* |
+| N=1024, 24 bit, XC7K160T-1  | 2885 | 2.5     | 28      | 458 MHz* |
+| N=4096, 24 bit, XC7Z010-1   | 3359 | 8       | 36      | 380 MHz  |
+| N=4096, 24 bit, XC7K160T-1  | 3362 | 8       | 36      | 458 MHz* |
+| N=8192, 24 bit, XC7K160T-1  | 3562 | 15      | 40      | 458 MHz* |
+
+* Bottlenecked by block ram maximum frequency
 
 # Architecture
 The basic architecture is based on subdividing a size N = N1*N2 FFT into N2 FFTs of size N1 followed by reordering and multiplication by twiddle factors, then N1 FFTs of size N2.

@@ -15,7 +15,7 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 | N=4096, 24 bit, XC7K160T-1  | 3362 | 8       | 36      | 458 MHz* |
 | N=8192, 24 bit, XC7K160T-1  | 3562 | 15      | 40      | 458 MHz* |
 
-* Bottlenecked by block ram maximum frequency
+\* Bottlenecked by block ram maximum frequency
 
 # Architecture
 The basic architecture is based on subdividing a size N = N1*N2 FFT into N2 FFTs of size N1 followed by reordering and multiplication by twiddle factors, then N1 FFTs of size N2.

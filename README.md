@@ -32,7 +32,7 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 
 <sup>(1)</sup> Bottlenecked by block ram maximum frequency.
 
-<sup>(2)</sup> Component constraints required. See below.
+<sup>(2)</sup> Additional contraints are required on BRAM synthesis. See below.
 
 <sup>(3)</sup> Fmax numbers are based on Vivado (2018.3) timing analysis with "Performance_Explore" synthesis strategy.
 
@@ -83,7 +83,7 @@ set_multicycle_path -setup -start -from [get_pins -hierarchical *fftIn_2Cycle*/C
 set_multicycle_path -hold -start -from [get_pins -hierarchical *fftIn_2Cycle*/C] -to [get_pins -hierarchical *fftOut_2Cycle*/D] 1
 ```
 
-For Ultrascale parts you may also need to force the use of width-cascading rather than depth-cascading of BRAMs to meet timing. After running implementation look for failed timing paths that pass through a series of BRAMs, and constrain those BRAMs to disable cascading. The constraints will look like this:
+For Ultrascale parts you may also need to force the use of width expansion rather than depth expansion of BRAMs to meet timing. After running implementation look for failed timing paths that pass through a series of BRAMs, and constrain those BRAMs to disable cascading. The constraints will look like this:
 ```
 set_property CASCADE_ORDER_B NONE [get_cells fft/top_core/transp/ram/ram1_reg_bram_0]
 set_property CASCADE_ORDER_B NONE [get_cells fft/top_core/transp/ram/ram1_reg_bram_1]

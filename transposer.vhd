@@ -2,8 +2,6 @@ library ieee;
 library work;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
-USE ieee.math_real.log2;
-USE ieee.math_real.ceil;
 use work.fft_types.all;
 use work.sr_unsigned;
 use work.complexRam;

@@ -20,7 +20,10 @@ entity transposer is
 	port(clk: in std_logic;
 		din: in complex;
 		phase: in unsigned(N1+N2-1 downto 0);
-		dout: out complex
+		dout: out complex;
+		-- set to 0 if the currently writing frame should not be reordered;
+		-- this is sampled near the end of the frame, at phase ~= N1*N2 - totalDelays
+		reorderEnable: in std_logic := '1'
 		);
 end entity;
 architecture ar of transposer is
@@ -31,7 +34,7 @@ architecture ar of transposer is
 begin
 	-- read side
 	addrGen: entity transposer_addrGen generic map(N1, N2, myDelays)
-		port map(clk, phase, oaddr);
+		port map(clk, reorderEnable, phase, oaddr);
 	-- -myDelays cycles
 	
 	ram: entity complexRam generic map(dataBits, N1+N2)

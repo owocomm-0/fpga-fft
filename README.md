@@ -7,19 +7,34 @@ Currently only supporting power-of-two sizes and fixed point data.
 
 Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher for common sizes.
 
+**Zynq-7000**
+
 | Name      | Configuration    | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
 | --------- | ---------------- | ----------- | ---- | ------- | ------- | -------- |
 | fft1024_3 | N=1024, 24 bit   | XC7Z010-1   | 2890 | 2.5     | 28      | 388 MHz<sup>(1)</sup> |
-| fft1024_3 | N=1024, 24 bit   | XC7K160T-1  | 2885 | 2.5     | 28      | 458 MHz<sup>(1)</sup> |
 | fft4096_2 | N=4096, 24 bit   | XC7Z010-1   | 3359 | 8       | 36      | 380 MHz  |
+
+**Kintex-7**
+
+| Name      | Configuration    | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
+| --------- | ---------------- | ----------- | ---- | ------- | ------- | -------- |
+| fft1024_3 | N=1024, 24 bit   | XC7K160T-1  | 2885 | 2.5     | 28      | 458 MHz<sup>(1)</sup> |
 | fft4096_2 | N=4096, 24 bit   | XC7K160T-1  | 3362 | 8       | 36      | 458 MHz<sup>(1)</sup> |
 | fft8192   | N=8192, 24 bit   | XC7K160T-1  | 3562 | 15      | 40      | 455 MHz |
 | fft16k_2  | N=16384, 24 bit  | XC7K160T-1  | 3743 | 29      | 44      | 458 MHz<sup>(1)</sup> |
 | fft32k    | N=32768, 24 bit  | XC7K160T-1  | 4333 | 54.5    | 44      | 458 MHz<sup>(1)</sup> |
 
+**Kintex Ultrascale**
+
+| Name      | Configuration    | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
+| --------- | ---------------- | ----------- | ---- | ------- | ------- | -------- |
+| fft4096_2 | N=4096, 24 bit   | XCKU025-1   | 3321 | 9       | 36      | 525 MHz<sup>(1)(2)</sup> |
+
 <sup>(1)</sup> Bottlenecked by block ram maximum frequency.
 
-<sup>(2)</sup> Fmax numbers are based on Vivado (2018.2) timing analysis with "Performance_Explore" synthesis strategy.
+<sup>(2)</sup> Additional contraints are required on BRAM synthesis. See below.
+
+<sup>(3)</sup> Fmax numbers are based on Vivado (2018.3) timing analysis with "Performance_Explore" synthesis strategy.
 
 # Architecture
 The basic architecture is based on subdividing a size N = N1*N2 FFT into N2 FFTs of size N1 followed by reordering and multiplication by twiddle factors, then N1 FFTs of size N2.
@@ -57,6 +72,8 @@ Data input and output order are described as an address bit permutation. The exa
 
 The generated cores can use a mix of 2-butterfly and 4-butterfly instances, and this can be used to fine tune the tradeoff between LUT usage and DSP48 usage.
 
+**Timing constraints**
+
 A few multi-cycle timing constraints are required (because the inner butterflies deserialize the data and present data every 2 or 4 cycles to the butterfly implementation):
 ```
 set_multicycle_path -setup -start -from [get_pins -hierarchical *fftIn_mCycle*/C] -to [get_pins -hierarchical *fftOut_mCycle*/D] 4
@@ -65,3 +82,16 @@ set_multicycle_path -hold -start -from [get_pins -hierarchical *fftIn_mCycle*/C]
 set_multicycle_path -setup -start -from [get_pins -hierarchical *fftIn_2Cycle*/C] -to [get_pins -hierarchical *fftOut_2Cycle*/D] 2
 set_multicycle_path -hold -start -from [get_pins -hierarchical *fftIn_2Cycle*/C] -to [get_pins -hierarchical *fftOut_2Cycle*/D] 1
 ```
+
+For Ultrascale parts you may also need to force the use of width expansion rather than depth expansion of BRAMs to meet timing. After running implementation look for failed timing paths that pass through a series of BRAMs, and constrain those BRAMs to disable cascading. The constraints will look like this:
+```
+set_property CASCADE_ORDER_B NONE [get_cells fft/top_core/transp/ram/ram1_reg_bram_0]
+set_property CASCADE_ORDER_B NONE [get_cells fft/top_core/transp/ram/ram1_reg_bram_1]
+set_property CASCADE_ORDER_B NONE [get_cells fft/top_core/transp/ram/ram1_reg_bram_2]
+set_property CASCADE_ORDER_B NONE [get_cells fft/top_core/transp/ram/ram1_reg_bram_3]
+set_property CASCADE_ORDER_B NONE [get_cells fft/top_core/transp/ram/ram1_reg_bram_4]
+set_property CASCADE_ORDER_B NONE [get_cells fft/top_core/transp/ram/ram1_reg_bram_5]
+```
+The exact instance names will need to be adjusted based on the timing report.
+See https://forums.xilinx.com/t5/UltraScale-Architecture/Prevent-Block-Ram-Cascade-Chain/td-p/645310
+

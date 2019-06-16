@@ -32,6 +32,9 @@ package fft_types is
 	function reverse_bits(val: unsigned) return unsigned;
 	function reverse_bits(val, bits: integer) return integer;
 	
+	-- returns ceil(log2(val))
+	function ceilLog2(val: integer) return integer;
+	
 	
 	function complex_str(val: complex) return String;
 	
@@ -189,6 +192,18 @@ package body fft_types is
 	function reverse_bits(val, bits: integer) return integer is
 	begin
 		return to_integer(reverse_bits(to_unsigned(val, bits)));
+	end function;
+	
+	function ceilLog2(val: integer) return integer is
+		variable tmp: integer;
+	begin
+		for I in 0 to 32 loop
+			tmp := 2**I;
+			if tmp >= val then
+				return I;
+			end if;
+		end loop;
+		return 32;
 	end function;
 	
 	

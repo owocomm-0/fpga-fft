@@ -2,8 +2,6 @@ library ieee;
 library work;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
-USE ieee.math_real.log2;
-USE ieee.math_real.ceil;
 use work.fft_types.all;
 use work.sr_unsigned;
 use work.complexRam;
@@ -11,15 +9,22 @@ use work.sr_complex;
 
 -- more general version of transposer;
 -- reorders data arbitrarily based on a bit permutation.
+--
 -- phase should be 0,1,2,3,4,5,6,... up to 2**N-1.
+--
 -- dataPathDelay determines the time offset between input and output.
 -- if it is guaranteed that at least 2 clock cycles pass between
 -- inputting a value to address i and reading it back,
 -- dataPathDelay can be set to 0 for a "zero delay" reorderer.
 -- otherwise, dataPathDelay is optimally 2.
+--
+-- repPeriod should be set to the repetition period of the
+-- permutation sequence. For example if perm(perm(perm("012345"))) = "012345"
+-- then repPeriod is 3.
 entity reorderBuffer is
 	generic(N: integer;
 			dataBits: integer;
+			repPeriod: integer;
 			bitPermDelay: integer := 0;
 			dataPathDelay: integer := 0);
 	port(clk: in std_logic;
@@ -29,7 +34,7 @@ entity reorderBuffer is
 		
 		-- external bit permutor
 		bitPermIn: out unsigned(N-1 downto 0);
-		bitPermCount: out unsigned(integer(ceil(log2(real(N))))-1 downto 0);
+		bitPermCount: out unsigned(ceilLog2(repPeriod)-1 downto 0);
 		bitPermOut: in unsigned(N-1 downto 0)
 		);
 end entity;
@@ -41,8 +46,8 @@ architecture ar of reorderBuffer is
 	constant totalDelays: integer := iif(extraRegister, 3, 2) + addrDelays;
 	
 	
-	constant stateCount: integer := N;
-	constant stateBits: integer := integer(ceil(log2(real(stateCount))));
+	constant stateCount: integer := repPeriod;
+	constant stateBits: integer := ceilLog2(stateCount);
 	
 	signal state,stateNext: unsigned(stateBits-1 downto 0) := (others=>'0');
 	signal ph1,ph2,ph3: unsigned(N-1 downto 0);

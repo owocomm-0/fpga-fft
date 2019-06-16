@@ -30,6 +30,13 @@ def bitOrderNTimes(bitOrder, n):
 		res = [res[x] for x in bitOrder]
 	return res
 
+def bitOrderConstraintLength(bitOrder):
+	tmp = range(len(bitOrder))
+	for i in xrange(1000):
+		tmp = [tmp[x] for x in bitOrder]
+		if bitOrderIsNatural(tmp): return i+1
+	assert False
+
 def addIndent(s):
 	ret = []
 	for line in s.split('\n'):
@@ -46,7 +53,8 @@ class BitPermutation:
 	def __init__(self, bitOrder):
 		self.bitOrder = bitOrder
 		self.N = len(bitOrder)
-		self.stateBits = int(ceil(log(self.N)/log(2)))
+		self.repLen = bitOrderConstraintLength(bitOrder)
+		self.stateBits = int(ceil(log(self.repLen)/log(2)))
 	
 	def genConstants(self, id):
 		return ''
@@ -323,12 +331,13 @@ signal {0:s}rbInPhase: unsigned({2:s}order-1 downto 0);
 						self.reorderPerm.sigCount(id),
 						self.reorderPerm.sigOut(id),
 						subId2,
-						self.reorderAdditiveDelay]
+						self.reorderAdditiveDelay,
+						self.reorderPerm.repLen]
 			body += self.reorderPerm.genBody(id)
 			body += '''
 	
 {0:s}rb: entity reorderBuffer
-	generic map(N=>{1:d}, dataBits=>dataBits, bitPermDelay=>0, dataPathDelay=>{6:d})
+	generic map(N=>{1:d}, dataBits=>dataBits, repPeriod=>{7:d}, bitPermDelay=>0, dataPathDelay=>{6:d})
 	port map(clk, din=>{0:s}rbIn, phase=>{0:s}rbInPhase, dout=>{5:s}in,
 		bitPermIn=>{2:s}, bitPermCount=>{3:s}, bitPermOut=>{4:s});
 	

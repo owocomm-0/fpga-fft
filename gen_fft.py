@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from math import *
-import sys
+import sys,random
 
 def myLog2(N):
 	tmp = log(N)/log(2.)
@@ -393,7 +393,7 @@ def genImports(fft):
 	ret.extend(genImports(fft.sub2))
 	return ret
 
-def genVHDL(fft):
+def genFFT(fft, entityName):
 	code = '''
 library ieee;
 library work;
@@ -417,14 +417,14 @@ use work.reorderBuffer;
 	params = [bitOrderDescription(fft.inputBitOrder()),
 			bitOrderDescription(fft.outputBitOrder()),
 			fft.delay(),
-			fft.N,
+			entityName,
 			myLog2(fft.N)]
 	code += '''
 -- data input bit order: {0:s}
 -- data output bit order: {1:s}
 -- phase should be 0,1,2,3,4,5,6,...
 -- delay is {2:d}
-entity fft{3:d}_generated is
+entity {3:s} is
 	generic(dataBits: integer := 24);
 	port(clk: in std_logic;
 		din: in complex;
@@ -432,7 +432,7 @@ entity fft{3:d}_generated is
 		dout: out complex
 		);
 end entity;
-architecture ar of fft{3:d}_generated is
+architecture ar of {3:s} is
 '''.format(*params)
 	
 	code += genDeclarations(fft, 'top', 1, 'genConstants')
@@ -450,6 +450,76 @@ end ar;
 '''
 	return code
 
+
+def genReorderer(fft, isOutput, rows, entityName):
+	colBits = myLog2(fft.N)
+	rowBits = myLog2(rows)
+	totalBits = colBits + rowBits
+	
+	fftDataOrder = None
+	dataOrder = None
+	if isOutput:
+		fftDataOrder = fft.outputBitOrder()
+		dataOrder = [x+rowBits for x in fftDataOrder] + range(0, rowBits)
+	else:
+		fftDataOrder = fft.inputBitOrder()
+		dataOrder = range(colBits, colBits+rowBits) + fftDataOrder
+	
+	perm = BitPermutation(dataOrder)
+	
+	#print bitOrderConstraintLength(dataOrder)
+	#return ''
+	
+	code = '''
+library ieee;
+library work;
+use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+USE ieee.math_real.log2;
+USE ieee.math_real.ceil;
+use work.fft_types.all;
+use work.reorderBuffer;
+'''
+	params = [
+			2**totalBits,
+			entityName,
+			totalBits,
+			bitOrderDescription(dataOrder)]
+	code += '''
+-- phase should be 0,1,2,3,4,5,6,...
+-- delay is {0:d}
+-- fft bit order: {3:s}
+entity {1:s} is
+	generic(dataBits: integer := 24);
+	port(clk: in std_logic;
+		din: in complex;
+		phase: in unsigned({2:d}-1 downto 0);
+		dout: out complex
+		);
+end entity;
+architecture ar of {1:s} is
+'''.format(*params)
+	
+	code += indent(perm.genDeclarations(''), 1)
+	code += indent(perm.genConstants(''), 1)
+	
+	params = [totalBits,
+				perm.sigIn(''),
+				perm.sigCount(''),
+				perm.sigOut(''),
+				perm.repLen]
+	code += '''
+begin
+	rb: entity reorderBuffer
+		generic map(N=>{0:d}, dataBits=>dataBits, repPeriod=>{4:d}, bitPermDelay=>0, dataPathDelay=>0)
+		port map(clk=>clk, din=>din, phase=>phase, dout=>dout,
+			bitPermIn=>{1:s}, bitPermCount=>{2:s}, bitPermOut=>{3:s});
+'''.format(*params)
+	code += indent(perm.genBody(''), 1)
+	code += '''
+end ar;
+'''
+	return code
 
 #fft2_scale_none = FFTBase(2, 'fft2_serial2', 'SCALE_NONE', 3)
 #fft2_scale_div_n = FFTBase(2, 'fft2_serial2', 'SCALE_DIV_N', 3)
@@ -476,6 +546,14 @@ fft16 = \
 
 fft16_scale_none = FFTConfiguration(16,  fft4_large_scale_none, fft4_scale_none);
 fft16_scale_div_n = FFTConfiguration(16,  fft4_scale_div_n, fft4_large_scale_div_n);
+
+# scales by 1/4. 32 is not a perfect square so 1/sqrt(n) is not possible
+fft32 = \
+	FFTConfiguration(32,
+		FFTConfiguration(8, 
+			fft4_large_scale_none,
+			fft2_scale_none),
+		fft4_large_scale_div_n);
 
 fft64 = \
 	FFTConfiguration(64,
@@ -568,6 +646,48 @@ fft1024_3 = \
 			fft4_scale_div_n),
 		16); # twiddleBits
 
+
+fft1024_moredsp1 = \
+	FFTConfiguration(1024,
+		FFTConfiguration(64,
+			FFTConfiguration(16, 
+				fft4_scale_none,
+				fft4_scale_none),
+			fft4_scale_div_sqrt_n),
+		FFTConfiguration(16, 
+			fft4_scale_div_n,
+			fft4_scale_div_n),
+		16); # twiddleBits
+
+
+fft1024_moredsp2 = \
+	FFTConfiguration(1024,
+		FFTConfiguration(32,
+			FFTConfiguration(8, 
+				fft4_scale_none,
+				fft2_scale_none),
+			fft4_scale_none),
+		FFTConfiguration(32,
+			FFTConfiguration(8, 
+				fft4_scale_div_n,
+				fft2_scale_div_n),
+			fft4_scale_div_n),
+		16); # twiddleBits
+
+
+fft1024_lessdsp = \
+	FFTConfiguration(1024,
+		FFTConfiguration(64,
+			FFTConfiguration(16, 
+				fft4_large_scale_none,
+				fft4_large_scale_none),
+			fft4_large_scale_div_sqrt_n),
+		FFTConfiguration(16, 
+			fft4_large_scale_div_n,
+			fft4_large_scale_div_n),
+		16); # twiddleBits
+
+
 fft4096 = \
 	FFTConfiguration(4096,
 		FFTConfiguration(64,
@@ -647,6 +767,25 @@ fft32k = \
 			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)),
 		16);
 
+# N = 14
+# perm = range(N)
+# for x in range(500):
+	# random.shuffle(perm)
+	# repLen = bitOrderConstraintLength(perm)
+	# if repLen > 84:
+		# print str(perm) + ': ' + str(repLen)
+
+# for N in range(3, 50):
+	# perm = range(N)
+	# maxRep = 0
+	# for x in range(50000):
+		# random.shuffle(perm)
+		# repLen = bitOrderConstraintLength(perm)
+		# if repLen > maxRep:
+			# maxRep = repLen
+	# print 'N = %d: %d' % (N, maxRep)
+
+# exit(0)
 
 #print fft256.inputBitOrder()
 #print fft256.outputBitOrder()
@@ -660,22 +799,27 @@ fft32k = \
 
 #print genVHDL(fft16k)
 
-if len(sys.argv) < 2:
-	print 'usage: %s INSTANCE_TO_GENERATE' % sys.argv[0]
+if len(sys.argv) < 3:
+	print 'usage: %s [fft|reorderer] INSTANCE_TO_GENERATE' % sys.argv[0]
 	print 'see source code of this program for a list of instances or add your own instance'
 	exit(1)
 
-instanceName = sys.argv[1]
+outpType = sys.argv[1]
+instanceName = sys.argv[2]
 instance = globals()[instanceName]
 
-vhdlCode = '-- instance name: ' + instanceName + '\n\n'
-vhdlCode += '-- layout:\n'
-vhdlCode += commentOut(instance.descriptionStr())
-vhdlCode += '\n\n'
+if outpType == 'fft':
+	vhdlCode = '-- instance name: ' + instanceName + '\n\n'
+	vhdlCode += '-- layout:\n'
+	vhdlCode += commentOut(instance.descriptionStr())
+	vhdlCode += '\n\n'
 
-print vhdlCode
-print genVHDL(instance)
+	print vhdlCode
+	print genFFT(instance, entityName=instanceName)
 
-print '\n-- instantiation (python):\n'
-print commentOut(instance.configurationStr())
+	print '\n-- instantiation (python):\n'
+	print commentOut(instance.configurationStr())
 
+if outpType == 'reorderer':
+	print genReorderer(instance, False, 2, instanceName + '_ireorderer')
+	print genReorderer(instance, True, 2, instanceName + '_oreorderer')

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+NAME="$1"
+./gen_fft.py fft "$NAME" > generated/"$NAME".vhd
+./gen_fft.py reorderer "$NAME" > generated/"$NAME"_reorderer.vhd

@@ -8,6 +8,14 @@ def myLog2(N):
 	assert 2**tmp == N
 	return tmp
 
+def serializeSymbol(val):
+	if type(val) is int:
+		return str(val)
+	if type(val) is str:
+		return '\'' + val.replace('\\', '\\\\').replace('\'', '\\\'') + '\''
+	raise TypeError(str(type(val)))
+
+
 def bitOrderDescription(bitOrder):
 	listStr = ','.join([str(x) for x in reversed(bitOrder)])
 	return '(%d downto 0) [%s]' % (len(bitOrder)-1, listStr)
@@ -163,15 +171,19 @@ signal {0:s}phase: unsigned({1:d}-1 downto 0);'''.format(id, myLog2(self.N))
 		return self.delay1
 
 class FFTConfiguration:
-	def __init__(self, N, sub1, sub2, twiddleBits=12):
+	def __init__(self, N, sub1, sub2, twiddleBits='twBits', rnd=True):
 		assert N == (sub1.N*sub2.N)
 		self.N = N
 		self.isBase = False
 		self.sub1 = sub1
 		self.sub2 = sub2
 		self.twiddleBits = twiddleBits
-		self.multDelay = 6
 		self.reorderAdditiveDelay = 0
+		self.rnd = rnd
+		if rnd:
+			self.multDelay = 8
+		else:
+			self.multDelay = 7
 		
 		if N > 32:
 			self.simpleTwiddleRom = False
@@ -195,11 +207,11 @@ class FFTConfiguration:
 		res = '%s(%d, \n' % (clsName, self.N)
 		res += addIndent(self.sub1.configurationStr()) + ',\n'
 		res += addIndent(self.sub2.configurationStr()) + ',\n'
-		res += 'twiddleBits=%d)' % self.twiddleBits
+		res += 'twiddleBits=%s)' % serializeSymbol(self.twiddleBits)
 		return res
 	
 	def descriptionStr(self):
-		res = '%d: twiddleBits=%d, delay=%d\n' % (self.N, self.twiddleBits, self.delay())
+		res = '%d: twiddleBits=%s, delay=%d\n' % (self.N, str(self.twiddleBits), self.delay())
 		res += addIndent(self.sub1.descriptionStr()) + '\n'
 		res += addIndent(self.sub2.descriptionStr())
 		return res
@@ -286,8 +298,11 @@ signal {0:s}rbInPhase: unsigned({2:s}order-1 downto 0);
 			sub2phase = id + 'rbInPhase'
 			sub2delay += self.reorderDelay
 		
-		#         0     1       2       3       4             5       6        7
-		params = [id, subId1, subId2, sub2in, sub2delay, sub2phase, bOrder1, self.N]
+		roundStr = 'false'
+		if self.rnd:
+			roundStr = 'true'
+		#         0     1       2       3       4             5       6        7          8              9
+		params = [id, subId1, subId2, sub2in, sub2delay, sub2phase, bOrder1, self.N, self.multDelay, roundStr]
 		body = '''
 {0:s}core: entity fft3step_bram_generic3
 	generic map(
@@ -296,8 +311,10 @@ signal {0:s}rbInPhase: unsigned({2:s}order-1 downto 0);
 		subOrder1=>{1:s}order,
 		subOrder2=>{2:s}order,
 		twiddleDelay=>{0:s}twiddleDelay,
+		multDelay=>{8:d},
 		subDelay1=>{1:s}delay,
 		subDelay2=>{4:d},
+		round=>{9:s},
 		customSubOrder=>true)
 	port map(
 		clk=>clk, phase=>{0:s}phase, phaseOut=>open,
@@ -425,7 +442,8 @@ use work.reorderBuffer;
 -- phase should be 0,1,2,3,4,5,6,...
 -- delay is {2:d}
 entity {3:s} is
-	generic(dataBits: integer := 24);
+	generic(dataBits: integer := 24;
+			twBits: integer := 12);
 	port(clk: in std_logic;
 		din: in complex;
 		phase: in unsigned({4:d}-1 downto 0);
@@ -644,8 +662,7 @@ fft1024_3 = \
 			fft4_scale_div_sqrt_n),
 		FFTConfiguration(16, 
 			fft4_large_scale_div_n,
-			fft4_scale_div_n),
-		16); # twiddleBits
+			fft4_scale_div_n));
 
 
 fft1024_moredsp1 = \
@@ -673,7 +690,7 @@ fft1024_moredsp2 = \
 				fft4_scale_div_n,
 				fft2_scale_div_n),
 			fft4_scale_div_n),
-		16); # twiddleBits
+		'twBits'); # twiddleBits
 
 
 fft1024_lessdsp = \
@@ -685,8 +702,7 @@ fft1024_lessdsp = \
 			fft4_large_scale_div_sqrt_n),
 		FFTConfiguration(16, 
 			fft4_large_scale_div_n,
-			fft4_large_scale_div_n),
-		16); # twiddleBits
+			fft4_large_scale_div_n));
 
 
 fft4096 = \

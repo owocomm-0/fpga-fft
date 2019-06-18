@@ -33,7 +33,8 @@ entity fft3step_bram_generic3 is
 			twiddleDelay: integer := 7;
 			subDelay1,subDelay2: integer := 11;
 			multDelay: integer := 6;
-			customSubOrder: boolean := false
+			customSubOrder: boolean := false;
+			round: boolean := true
 			);
 
 	port(clk: in std_logic;
@@ -96,7 +97,9 @@ begin
 	-- twData is aligned with rph0
 	
 	-- mutliply by twiddles; delay is multDelay cycles
-	mult: entity complexMultiply generic map(dataBits,twiddleBits+1,dataBits)
+	mult: entity complexMultiply
+		generic map(in1Bits=>dataBits, in2Bits=>twiddleBits+1,
+					outBits=>dataBits, round=>round)
 		port map(clk, rdata, twdata, multOut);
 	rph3 <= rph0-multDelay+1 when rising_edge(clk);
 	-- subDelay1 + 16 + mult_delay cycles

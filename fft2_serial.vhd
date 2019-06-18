@@ -13,7 +13,7 @@ use work.fft2_noPipeline;
 entity fft2_serial is
 	generic(dataBits: integer := 18;
 			scale: scalingModes := SCALE_NONE;
-			round: boolean := false);
+			round: boolean := true);
 
 	port(clk: in std_logic;
 		din: in complex;

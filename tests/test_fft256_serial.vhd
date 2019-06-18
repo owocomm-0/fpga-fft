@@ -5,8 +5,7 @@ use std.textio.all; -- Imports the standard textio package.
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 use work.fft_types.all;
-use work.fft256_serial;
-use work.fft256_generated;
+use work.fft256;
 
 
 --  Defines a design entity, without any ports.
@@ -19,11 +18,11 @@ architecture behaviour of test_fft256_serial is
 	signal phase: unsigned(7 downto 0);
 	signal dout: complex;
 	signal debug1: integer;
-	constant delay: integer := 394;
+	constant delay: integer := 368;
 begin
 	
-	fft: entity fft256_generated port map(
-			clk,din,phase,dout);
+	fft: entity fft256 generic map(twBits=>16)
+		port map(clk,din,phase,dout);
 	process
 		variable l : line;
 		variable i1,i2,o1,o2,row,col: integer := 0;
@@ -71,10 +70,11 @@ begin
 			--inputPerm := ii(1)&ii(0)&ii(7)&ii(6)&ii(5)&ii(4)&ii(3)&ii(2);
 			--outputPerm := oi(1)&oi(0)&oi(3)&oi(2)&oi(5)&oi(4)&oi(7)&oi(6);
 			
--- data input bit order: (7 downto 0) [0,1,3,2,7,6,5,4]
--- data output bit order: (7 downto 0) [0,1,2,3,4,5,6,7]
-			inputPerm := ii(0)&ii(1)&ii(3)&ii(2)&ii(7)&ii(6)&ii(5)&ii(4);
-			outputPerm := oi(0)&oi(1)&oi(2)&oi(3)&oi(4)&oi(5)&oi(6)&oi(7);
+
+-- data input bit order: (7 downto 0) [1,0,3,2,7,6,5,4]
+-- data output bit order: (7 downto 0) [1,0,3,2,5,4,7,6]
+			inputPerm := ii(1)&ii(0)&ii(3)&ii(2)&ii(7)&ii(6)&ii(5)&ii(4);
+			outputPerm := oi(1)&oi(0)&oi(3)&oi(2)&oi(5)&oi(4)&oi(7)&oi(6);
 			
 			
 			i1 := to_integer(inputPerm) + i2*256;

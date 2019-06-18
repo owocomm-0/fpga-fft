@@ -5,7 +5,7 @@ use ieee.std_logic_1164.all;
 use work.fft_types.all;
 use work.fft4_noPipeline;
 
--- data appears 11 cycles after the first input word
+-- data appears 10 cycles after the first input word
 -- output values are normalized to 1/sqrt(n);
 -- input data should be in linear order if bitReversedOrder is false, 0-2-1-3 order otherwise.
 
@@ -58,11 +58,16 @@ g2: if not bitReversedOrder generate
 	fftOut_mCycle <= fftOut_mCycle_0 when phase=0 and rising_edge(clk);
 	-- 9 cycles
 	
-	shiftOutNext <= fftOut_mCycle when phase=1 else
-					to_complex(0,0) & shiftOut(3 downto 1);
-	shiftOut <= shiftOutNext when rising_edge(clk);
-	-- 10 cycles
+	--shiftOutNext <= fftOut_mCycle when phase=1 else
+	--				to_complex(0,0) & shiftOut(3 downto 1);
+	--shiftOut <= shiftOutNext when rising_edge(clk);
+	
+	shiftOut(0) <= fftOut_mCycle(0) when phase=1 else
+					fftOut_mCycle(1) when phase=2 else
+					fftOut_mCycle(2) when phase=3 else
+					fftOut_mCycle(3);
+	-- 9 cycles
 	
 	dout <= shiftOut(0) when rising_edge(clk);
-	-- 11 cycles
+	-- 10 cycles
 end ar;

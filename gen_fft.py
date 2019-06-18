@@ -99,7 +99,7 @@ class BitPermutation:
 		return 0
 
 class FFTBase:
-	def __init__(self, N, entity, scale, delay1=11):
+	def __init__(self, N, entity, scale, delay1):
 		self.N = N
 		self.isBase = True
 		self.entity = entity
@@ -533,16 +533,17 @@ fft4_scale_div_sqrt_n = FFTConfiguration(4, fft2_scale_none, fft2_scale_div_n);
 fft4_scale_div_n = FFTConfiguration(4, fft2_scale_div_n, fft2_scale_div_n);
 
 
-fft4_large_scale_none = FFTBase(4, 'fft4_serial3', 'SCALE_NONE', 11)
-fft4_large_scale_div_sqrt_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', 11)
-fft4_large_scale_div_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N', 11)
+fft4_delay = 10
+fft4_large_scale_none = FFTBase(4, 'fft4_serial3', 'SCALE_NONE', fft4_delay)
+fft4_large_scale_div_sqrt_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', fft4_delay)
+fft4_large_scale_div_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N', fft4_delay)
 
 
 
 fft16 = \
 	FFTConfiguration(16, 
-		FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
-		FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'));
+		fft4_large_scale_none,
+		fft4_large_scale_div_n);
 
 fft16_scale_none = FFTConfiguration(16,  fft4_large_scale_none, fft4_scale_none);
 fft16_scale_div_n = FFTConfiguration(16,  fft4_scale_div_n, fft4_large_scale_div_n);
@@ -558,9 +559,9 @@ fft32 = \
 fft64 = \
 	FFTConfiguration(64,
 		FFTConfiguration(16, 
-			FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N')),
-		FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'));
+			fft4_large_scale_none,
+			fft4_large_scale_div_sqrt_n),
+		fft4_large_scale_div_n);
 
 
 fft64_scale_none = FFTConfiguration(64, fft16_scale_none, fft4_scale_none);
@@ -572,29 +573,29 @@ fft64_scale_div_n = FFTConfiguration(64, fft16_scale_div_n, fft4_scale_div_n);
 fft256 = \
 	FFTConfiguration(256,
 		FFTConfiguration(16, 
-			FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
-			FFTBase(4, 'fft4_serial3', 'SCALE_NONE')),
+			fft4_large_scale_none,
+			fft4_large_scale_none),
 		FFTConfiguration(16, 
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'),
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')));
+			fft4_large_scale_div_n,
+			fft4_large_scale_div_n));
 
 fft256_2 = \
 	FFTConfiguration(256,
 		FFTConfiguration(64,
 			FFTConfiguration(16, 
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE')),
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')),
-		FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'));
+				fft4_large_scale_none,
+				fft4_large_scale_none),
+			fft4_large_scale_div_n),
+		fft4_large_scale_div_n);
 
 fft256_3 = \
 	FFTConfiguration(256,
-		FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
+		fft4_large_scale_none,
 		FFTConfiguration(64,
 			FFTConfiguration(16, 
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
-				FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')),
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')));
+				fft4_large_scale_none,
+				fft4_large_scale_div_n),
+			fft4_large_scale_div_n));
 
 
 fft256_4 = \
@@ -612,12 +613,12 @@ fft1024 = \
 	FFTConfiguration(1024,
 		FFTConfiguration(256,
 			FFTConfiguration(16, 
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE')),
+				fft4_large_scale_none,
+				fft4_large_scale_none),
 			FFTConfiguration(16, 
-				FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N'),
-				FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'))),
-		FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'),
+				fft4_large_scale_div_sqrt_n,
+				fft4_large_scale_div_n)),
+		fft4_large_scale_div_n,
 		16); # twiddleBits
 
 
@@ -625,12 +626,12 @@ fft1024_2 = \
 	FFTConfiguration(1024,
 		FFTConfiguration(64,
 			FFTConfiguration(16, 
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE')),
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N')),
+				fft4_large_scale_none,
+				fft4_large_scale_none),
+			fft4_large_scale_div_sqrt_n),
 		FFTConfiguration(16, 
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'),
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')),
+			fft4_large_scale_div_n,
+			fft4_large_scale_div_n),
 		16); # twiddleBits
 
 
@@ -692,14 +693,14 @@ fft4096 = \
 	FFTConfiguration(4096,
 		FFTConfiguration(64,
 			FFTConfiguration(16, 
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
-				FFTBase(4, 'fft4_serial3', 'SCALE_NONE')),
-			FFTBase(4, 'fft4_serial3', 'SCALE_NONE')),
+				fft4_large_scale_none,
+				fft4_large_scale_none),
+			fft4_large_scale_none),
 		FFTConfiguration(64,
 			FFTConfiguration(16, 
-				FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'),
-				FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')),
-			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')),
+				fft4_large_scale_div_n,
+				fft4_large_scale_div_n),
+			fft4_large_scale_div_n),
 		16); # twiddleBits
 
 

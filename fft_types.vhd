@@ -23,6 +23,7 @@ package fft_types is
     function keepNBits (val: complex; bits: integer) return complex;
     function shift_left(val: complex; N: integer) return complex;
     function shift_right(val: complex; N: integer) return complex;
+    function complex_swap(val: complex) return complex;
     function rotate_quarter(val: complex) return complex;
     function rotate_mquarter(val: complex) return complex;
     
@@ -162,6 +163,13 @@ package body fft_types is
 		return res;
 	end function;
 	
+	function complex_swap(val: complex) return complex is
+		variable res: complex;
+	begin
+		res.im := val.re;
+		res.re := val.im;
+		return res;
+	end function;
 	
 	function rotate_quarter(val: complex) return complex is
 		variable res: complex;

@@ -4,8 +4,8 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 use work.fft_types.all;
 
--- delay is 8 cycles when round is true,
--- 7 cycles otherwise
+-- delay is 7 cycles when round is true,
+-- 6 cycles otherwise
 entity complexMultiply is
 	generic(in1Bits,in2Bits,outBits: integer := 8;
 			round: boolean := true);
@@ -54,7 +54,7 @@ begin
 	bd2 <= bd when rising_edge(clk);
 	--ad2 <= a2*d2 when rising_edge(clk);
 	bc2 <= bc when rising_edge(clk);
-	
+
 	ac3 <= a3*c3 when rising_edge(clk);
 	bd3 <= bd2 when rising_edge(clk);
 	ad3 <= a3*d3 when rising_edge(clk);
@@ -81,8 +81,8 @@ begin
 		--res_re <= ac3-bd3 when rising_edge(clk);--+resize(halfLSB,internalBits);
 		--res_im <= ad3+bc3 when rising_edge(clk);--+resize(halfLSB,internalBits);
 	--end generate;
-	res_re <= ac4-bd4 when rising_edge(clk);--+resize(halfLSB,internalBits);
-	res_im <= ad4+bc4 when rising_edge(clk);--+resize(halfLSB,internalBits);
+	res_re <= ac3-bd3 when rising_edge(clk);--+resize(halfLSB,internalBits);
+	res_im <= ad3+bc3 when rising_edge(clk);--+resize(halfLSB,internalBits);
 	
 	-- round & cast
 	rnd_re <= res_re(res_re'left-2 downto res_re'left-outBits-2) when rising_edge(clk);

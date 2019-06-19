@@ -552,9 +552,15 @@ fft4_scale_div_n = FFTConfiguration(4, fft2_scale_div_n, fft2_scale_div_n);
 
 
 fft4_delay = 10
-fft4_large_scale_none = FFTBase(4, 'fft4_serial3', 'SCALE_NONE', fft4_delay)
+#fft4_large_scale_none = FFTBase(4, 'fft4_serial3', 'SCALE_NONE', fft4_delay)
 fft4_large_scale_div_sqrt_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', fft4_delay)
-fft4_large_scale_div_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N', fft4_delay)
+#fft4_large_scale_div_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N', fft4_delay)
+
+
+fft4_delay = 12
+fft4_large_scale_none = FFTBase(4, 'fft4_serial4', 'SCALE_NONE', fft4_delay)
+fft4_large_scale_div_n = FFTBase(4, 'fft4_serial4', 'SCALE_DIV_N', fft4_delay)
+
 
 
 

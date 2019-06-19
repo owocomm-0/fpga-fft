@@ -1,15 +1,15 @@
 -- instance name: fft1024_lessdsp
 
 -- layout:
---1024: twiddleBits=twBits, delay=1218
---	64: twiddleBits=twBits, delay=126
---		16: twiddleBits=twBits, delay=44
---			4: base, 'fft4_serial3', scale='SCALE_NONE', delay=10
---			4: base, 'fft4_serial3', scale='SCALE_NONE', delay=10
+--1024: twiddleBits=twBits, delay=1226
+--	64: twiddleBits=twBits, delay=130
+--		16: twiddleBits=twBits, delay=48
+--			4: base, 'fft4_serial4', scale='SCALE_NONE', delay=12
+--			4: base, 'fft4_serial4', scale='SCALE_NONE', delay=12
 --		4: base, 'fft4_serial3', scale='SCALE_DIV_SQRT_N', delay=10
---	16: twiddleBits=twBits, delay=44
---		4: base, 'fft4_serial3', scale='SCALE_DIV_N', delay=10
---		4: base, 'fft4_serial3', scale='SCALE_DIV_N', delay=10
+--	16: twiddleBits=twBits, delay=48
+--		4: base, 'fft4_serial4', scale='SCALE_DIV_N', delay=12
+--		4: base, 'fft4_serial4', scale='SCALE_DIV_N', delay=12
 
 
 
@@ -27,12 +27,13 @@ use work.reorderBuffer;
 use work.twiddleRom1024;
 use work.twiddleRom64;
 use work.twiddleGenerator16;
+use work.fft4_serial4;
 use work.fft4_serial3;
 
 -- data input bit order: (9 downto 0) [1,0,3,2,5,4,9,8,7,6]
 -- data output bit order: (9 downto 0) [1,0,3,2,5,4,7,6,9,8]
 -- phase should be 0,1,2,3,4,5,6,...
--- delay is 1218
+-- delay is 1226
 entity fft1024_lessdsp is
 	generic(dataBits: integer := 24;
 			twBits: integer := 12);
@@ -48,31 +49,31 @@ architecture ar of fft1024_lessdsp is
 	constant top_twiddleBits: integer := twBits;
 	constant top_twiddleDelay: integer := 7;
 	constant top_order: integer := 10;
-	constant top_delay: integer := 1218;
+	constant top_delay: integer := 1226;
 
 		-- ====== FFT instance 'A' (N=64) ======
 		constant A_N: integer := 64;
 		constant A_twiddleBits: integer := twBits;
 		constant A_twiddleDelay: integer := 7;
 		constant A_order: integer := 6;
-		constant A_delay: integer := 126;
+		constant A_delay: integer := 130;
 
 			-- ====== FFT instance 'AA' (N=16) ======
 			constant AA_N: integer := 16;
 			constant AA_twiddleBits: integer := twBits;
 			constant AA_twiddleDelay: integer := 2;
 			constant AA_order: integer := 4;
-			constant AA_delay: integer := 44;
+			constant AA_delay: integer := 48;
 
 				-- ====== FFT instance 'AAA' (N=4) ======
 				constant AAA_N: integer := 4;
 				constant AAA_order: integer := 2;
-				constant AAA_delay: integer := 10;
+				constant AAA_delay: integer := 12;
 
 				-- ====== FFT instance 'AAB' (N=4) ======
 				constant AAB_N: integer := 4;
 				constant AAB_order: integer := 2;
-				constant AAB_delay: integer := 10;
+				constant AAB_delay: integer := 12;
 
 			-- ====== FFT instance 'AB' (N=4) ======
 			constant AB_N: integer := 4;
@@ -84,17 +85,17 @@ architecture ar of fft1024_lessdsp is
 		constant B_twiddleBits: integer := twBits;
 		constant B_twiddleDelay: integer := 2;
 		constant B_order: integer := 4;
-		constant B_delay: integer := 44;
+		constant B_delay: integer := 48;
 
 			-- ====== FFT instance 'BA' (N=4) ======
 			constant BA_N: integer := 4;
 			constant BA_order: integer := 2;
-			constant BA_delay: integer := 10;
+			constant BA_delay: integer := 12;
 
 			-- ====== FFT instance 'BB' (N=4) ======
 			constant BB_N: integer := 4;
 			constant BB_order: integer := 2;
-			constant BB_delay: integer := 10;
+			constant BB_delay: integer := 12;
 
 	--=======================================
 
@@ -175,7 +176,7 @@ begin
 			twiddleDelay=>top_twiddleDelay,
 			multDelay=>8,
 			subDelay1=>A_delay,
-			subDelay2=>60,
+			subDelay2=>64,
 			round=>true,
 			customSubOrder=>true)
 		port map(
@@ -241,7 +242,7 @@ begin
 					twiddleDelay=>AA_twiddleDelay,
 					multDelay=>8,
 					subDelay1=>AAA_delay,
-					subDelay2=>10,
+					subDelay2=>12,
 					round=>true,
 					customSubOrder=>true)
 				port map(
@@ -259,12 +260,12 @@ begin
 			AA_tw: entity twiddleGenerator16 port map(clk, AA_twAddr, AA_twData);
 
 				-- ====== FFT instance 'AAA' (N=4) ======
-				AAA_inst: entity fft4_serial3
+				AAA_inst: entity fft4_serial4
 					generic map(dataBits=>dataBits, scale=>SCALE_NONE)
 					port map(clk=>clk, din=>AAA_in, phase=>AAA_phase, dout=>AAA_out);
 
 				-- ====== FFT instance 'AAB' (N=4) ======
-				AAB_inst: entity fft4_serial3
+				AAB_inst: entity fft4_serial4
 					generic map(dataBits=>dataBits, scale=>SCALE_NONE)
 					port map(clk=>clk, din=>AAB_in, phase=>AAB_phase, dout=>AAB_out);
 
@@ -283,7 +284,7 @@ begin
 				twiddleDelay=>B_twiddleDelay,
 				multDelay=>8,
 				subDelay1=>BA_delay,
-				subDelay2=>10,
+				subDelay2=>12,
 				round=>true,
 				customSubOrder=>true)
 			port map(
@@ -301,12 +302,12 @@ begin
 		B_tw: entity twiddleGenerator16 port map(clk, B_twAddr, B_twData);
 
 			-- ====== FFT instance 'BA' (N=4) ======
-			BA_inst: entity fft4_serial3
+			BA_inst: entity fft4_serial4
 				generic map(dataBits=>dataBits, scale=>SCALE_DIV_N)
 				port map(clk=>clk, din=>BA_in, phase=>BA_phase, dout=>BA_out);
 
 			-- ====== FFT instance 'BB' (N=4) ======
-			BB_inst: entity fft4_serial3
+			BB_inst: entity fft4_serial4
 				generic map(dataBits=>dataBits, scale=>SCALE_DIV_N)
 				port map(clk=>clk, din=>BB_in, phase=>BB_phase, dout=>BB_out);
 end ar;
@@ -317,13 +318,13 @@ end ar;
 --FFTConfiguration(1024, 
 --	FFTConfiguration(64, 
 --		FFTConfiguration(16, 
---			FFTBase(4, 'fft4_serial3', 'SCALE_NONE', 10),
---			FFTBase(4, 'fft4_serial3', 'SCALE_NONE', 10),
+--			FFTBase(4, 'fft4_serial4', 'SCALE_NONE', 12),
+--			FFTBase(4, 'fft4_serial4', 'SCALE_NONE', 12),
 --		twiddleBits='twBits'),
 --		FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', 10),
 --	twiddleBits='twBits'),
 --	FFTConfiguration(16, 
---		FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N', 10),
---		FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N', 10),
+--		FFTBase(4, 'fft4_serial4', 'SCALE_DIV_N', 12),
+--		FFTBase(4, 'fft4_serial4', 'SCALE_DIV_N', 12),
 --	twiddleBits='twBits'),
 --twiddleBits='twBits')

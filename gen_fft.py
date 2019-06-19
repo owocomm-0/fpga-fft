@@ -8,6 +8,12 @@ def myLog2(N):
 	assert 2**tmp == N
 	return tmp
 
+def boolStr(b):
+	if b:
+		return 'true'
+	else:
+		return 'false'
+
 def serializeSymbol(val):
 	if type(val) is int:
 		return str(val)
@@ -115,6 +121,12 @@ class FFTBase:
 		self.delay1 = delay1
 		self.dataBits = 'dataBits'
 		self.imports = [entity]
+	
+	def setOptions(self, rnd, largeMultiplier):
+		pass
+	
+	def setOptionsRecursive(self, rnd, largeMultiplier):
+		pass
 
 	def configurationStr(self):
 		clsName = self.__class__.__name__
@@ -171,7 +183,7 @@ signal {0:s}phase: unsigned({1:d}-1 downto 0);'''.format(id, myLog2(self.N))
 		return self.delay1
 
 class FFTConfiguration:
-	def __init__(self, N, sub1, sub2, twiddleBits='twBits', rnd=True):
+	def __init__(self, N, sub1, sub2, twiddleBits='twBits', rnd=True, largeMultiplier=False):
 		assert N == (sub1.N*sub2.N)
 		self.N = N
 		self.isBase = False
@@ -179,11 +191,7 @@ class FFTConfiguration:
 		self.sub2 = sub2
 		self.twiddleBits = twiddleBits
 		self.reorderAdditiveDelay = 0
-		self.rnd = rnd
-		if rnd:
-			self.multDelay = 8
-		else:
-			self.multDelay = 7
+		self.setOptions(rnd, largeMultiplier)
 		
 		if N > 32:
 			self.simpleTwiddleRom = False
@@ -200,6 +208,22 @@ class FFTConfiguration:
 			self.reorderDelay = sub2.N + self.reorderAdditiveDelay
 		else:
 			self.sub2Transposer = False
+	
+	def setOptions(self, rnd, largeMultiplier):
+		self.rnd = rnd
+		self.largeMultiplier = largeMultiplier
+		self.multDelay = 6
+		
+		if largeMultiplier:
+			if rnd:
+				self.multDelay = 9
+			else:
+				self.multDelay = 8
+	
+	def setOptionsRecursive(self, rnd, largeMultiplier):
+		self.setOptions(rnd, largeMultiplier)
+		self.sub1.setOptionsRecursive(rnd, largeMultiplier)
+		self.sub2.setOptionsRecursive(rnd, largeMultiplier)
 	
 	def configurationStr(self):
 		clsName = self.__class__.__name__
@@ -298,11 +322,10 @@ signal {0:s}rbInPhase: unsigned({2:s}order-1 downto 0);
 			sub2phase = id + 'rbInPhase'
 			sub2delay += self.reorderDelay
 		
-		roundStr = 'false'
-		if self.rnd:
-			roundStr = 'true'
-		#         0     1       2       3       4             5       6        7          8              9
-		params = [id, subId1, subId2, sub2in, sub2delay, sub2phase, bOrder1, self.N, self.multDelay, roundStr]
+		#         0     1       2       3       4             5       6     
+		params = [id, subId1, subId2, sub2in, sub2delay, sub2phase, bOrder1,
+		#              7          8              9                    10
+					self.N, self.multDelay, boolStr(self.rnd), boolStr(self.largeMultiplier)]
 		body = '''
 {0:s}core: entity fft3step_bram_generic3
 	generic map(
@@ -315,7 +338,8 @@ signal {0:s}rbInPhase: unsigned({2:s}order-1 downto 0);
 		subDelay1=>{1:s}delay,
 		subDelay2=>{4:d},
 		round=>{9:s},
-		customSubOrder=>true)
+		customSubOrder=>true,
+		largeMultiplier=>{10:s})
 	port map(
 		clk=>clk, phase=>{0:s}phase, phaseOut=>open,
 		subOut1=>{1:s}out,
@@ -546,9 +570,9 @@ fft2_scale_none = FFTBase(2, 'fft2_serial', 'SCALE_NONE', 6)
 fft2_scale_div_n = FFTBase(2, 'fft2_serial', 'SCALE_DIV_N', 6)
 
 
-fft4_scale_none = FFTConfiguration(4, fft2_scale_none, fft2_scale_none);
+#fft4_scale_none = FFTConfiguration(4, fft2_scale_none, fft2_scale_none);
 fft4_scale_div_sqrt_n = FFTConfiguration(4, fft2_scale_none, fft2_scale_div_n);
-fft4_scale_div_n = FFTConfiguration(4, fft2_scale_div_n, fft2_scale_div_n);
+#fft4_scale_div_n = FFTConfiguration(4, fft2_scale_div_n, fft2_scale_div_n);
 
 
 fft4_delay = 10
@@ -560,17 +584,18 @@ fft4_large_scale_div_sqrt_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', fft
 fft4_delay = 12
 fft4_large_scale_none = FFTBase(4, 'fft4_serial4', 'SCALE_NONE', fft4_delay)
 fft4_large_scale_div_n = FFTBase(4, 'fft4_serial4', 'SCALE_DIV_N', fft4_delay)
-
+fft4_scale_none = fft4_large_scale_none
+fft4_scale_div_n = fft4_large_scale_div_n
 
 
 
 fft16 = \
 	FFTConfiguration(16, 
-		fft4_large_scale_none,
-		fft4_large_scale_div_n);
+		fft4_scale_none,
+		fft4_scale_div_n);
 
 fft16_scale_none = FFTConfiguration(16,  fft4_large_scale_none, fft4_scale_none);
-fft16_scale_div_n = FFTConfiguration(16,  fft4_scale_div_n, fft4_large_scale_div_n);
+fft16_scale_div_n = FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n);
 
 # scales by 1/4. 32 is not a perfect square so 1/sqrt(n) is not possible
 fft32 = \
@@ -578,14 +603,14 @@ fft32 = \
 		FFTConfiguration(8, 
 			fft4_large_scale_none,
 			fft2_scale_none),
-		fft4_large_scale_div_n);
+		fft4_scale_div_n);
 
 fft64 = \
 	FFTConfiguration(64,
 		FFTConfiguration(16, 
-			fft4_large_scale_none,
+			fft4_scale_none,
 			fft4_large_scale_div_sqrt_n),
-		fft4_large_scale_div_n);
+		fft4_scale_div_n);
 
 
 fft64_scale_none = FFTConfiguration(64, fft16_scale_none, fft4_scale_none);
@@ -597,161 +622,69 @@ fft64_scale_div_n = FFTConfiguration(64, fft16_scale_div_n, fft4_scale_div_n);
 fft256 = \
 	FFTConfiguration(256,
 		FFTConfiguration(16, 
-			fft4_large_scale_none,
-			fft4_large_scale_none),
-		FFTConfiguration(16, 
-			fft4_large_scale_div_n,
-			fft4_large_scale_div_n));
-
-fft256_2 = \
-	FFTConfiguration(256,
-		FFTConfiguration(64,
-			FFTConfiguration(16, 
-				fft4_large_scale_none,
-				fft4_large_scale_none),
-			fft4_large_scale_div_n),
-		fft4_large_scale_div_n);
-
-fft256_3 = \
-	FFTConfiguration(256,
-		fft4_large_scale_none,
-		FFTConfiguration(64,
-			FFTConfiguration(16, 
-				fft4_large_scale_none,
-				fft4_large_scale_div_n),
-			fft4_large_scale_div_n));
-
-
-fft256_4 = \
-	FFTConfiguration(256,
-		FFTConfiguration(16, 
 			fft4_scale_none,
 			fft4_scale_none),
 		FFTConfiguration(16, 
 			fft4_scale_div_n,
 			fft4_scale_div_n));
-
+fft256.setOptionsRecursive(True, True)
 
 
 fft1024 = \
-	FFTConfiguration(1024,
-		FFTConfiguration(256,
-			FFTConfiguration(16, 
-				fft4_large_scale_none,
-				fft4_large_scale_none),
-			FFTConfiguration(16, 
-				fft4_large_scale_div_sqrt_n,
-				fft4_large_scale_div_n)),
-		fft4_large_scale_div_n,
-		16); # twiddleBits
-
-
-fft1024_2 = \
-	FFTConfiguration(1024,
-		FFTConfiguration(64,
-			FFTConfiguration(16, 
-				fft4_large_scale_none,
-				fft4_large_scale_none),
-			fft4_large_scale_div_sqrt_n),
-		FFTConfiguration(16, 
-			fft4_large_scale_div_n,
-			fft4_large_scale_div_n),
-		16); # twiddleBits
-
-
-fft1024_3 = \
-	FFTConfiguration(1024,
-		FFTConfiguration(64,
-			FFTConfiguration(16, 
-				fft4_scale_none,
-				fft4_large_scale_none),
-			fft4_scale_div_sqrt_n),
-		FFTConfiguration(16, 
-			fft4_large_scale_div_n,
-			fft4_scale_div_n));
-
-
-fft1024_moredsp1 = \
 	FFTConfiguration(1024,
 		FFTConfiguration(64,
 			FFTConfiguration(16, 
 				fft4_scale_none,
 				fft4_scale_none),
-			fft4_scale_div_sqrt_n),
+			fft4_large_scale_div_sqrt_n),
 		FFTConfiguration(16, 
 			fft4_scale_div_n,
-			fft4_scale_div_n),
-		16); # twiddleBits
+			fft4_scale_div_n));
 
-
-fft1024_moredsp2 = \
-	FFTConfiguration(1024,
-		FFTConfiguration(32,
-			FFTConfiguration(8, 
-				fft4_scale_none,
-				fft2_scale_none),
-			fft4_scale_none),
-		FFTConfiguration(32,
-			FFTConfiguration(8, 
-				fft4_scale_div_n,
-				fft2_scale_div_n),
-			fft4_scale_div_n),
-		'twBits'); # twiddleBits
-
-
-fft1024_lessdsp = \
+fft1024_wide = \
 	FFTConfiguration(1024,
 		FFTConfiguration(64,
 			FFTConfiguration(16, 
-				fft4_large_scale_none,
-				fft4_large_scale_none),
+				fft4_scale_none,
+				fft4_scale_none),
 			fft4_large_scale_div_sqrt_n),
 		FFTConfiguration(16, 
-			fft4_large_scale_div_n,
-			fft4_large_scale_div_n));
+			fft4_scale_div_n,
+			fft4_scale_div_n));
+
+fft1024_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
+
+fft1024_2 = \
+	FFTConfiguration(1024,
+		FFTConfiguration(256,
+			FFTConfiguration(16, 
+				fft4_scale_none,
+				fft4_scale_none),
+			FFTConfiguration(16, 
+				fft4_large_scale_div_sqrt_n,
+				fft4_scale_div_n)),
+		fft4_scale_div_n);
+
+
 
 
 fft4096 = \
 	FFTConfiguration(4096,
 		FFTConfiguration(64,
-			FFTConfiguration(16, 
-				fft4_large_scale_none,
-				fft4_large_scale_none),
-			fft4_large_scale_none),
-		FFTConfiguration(64,
-			FFTConfiguration(16, 
-				fft4_large_scale_div_n,
-				fft4_large_scale_div_n),
-			fft4_large_scale_div_n),
-		16); # twiddleBits
-
-
-fft4096_2 = \
-	FFTConfiguration(4096,
-		fft64_scale_none,
-		fft64_scale_div_n,
-		16); # twiddleBits
-
-
-fft4096_2 = \
-	FFTConfiguration(4096,
-		FFTConfiguration(64,
-			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_none),
+			FFTConfiguration(16,  fft4_scale_none, fft4_scale_none),
 			fft4_scale_none),
 		FFTConfiguration(64, 
-			FFTConfiguration(16,  fft4_large_scale_div_n, fft4_scale_div_n),
-			fft4_scale_div_n),
-		16); # twiddleBits
+			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
+			fft4_scale_div_n));
 
 fft8192 = \
 	FFTConfiguration(8192,
 		FFTConfiguration(128,
-			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_none),
+			FFTConfiguration(16,  fft4_scale_none, fft4_scale_none),
 			FFTConfiguration(8,  fft4_scale_none, fft2_scale_div_n)),
 		FFTConfiguration(64, 
-			FFTConfiguration(16,  fft4_large_scale_div_sqrt_n, fft4_scale_div_n),
-			fft4_scale_div_n),
-		16); # twiddleBits
+			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
+			fft4_scale_div_n));
 
 fft16k = \
 	FFTConfiguration(16*1024,
@@ -759,36 +692,43 @@ fft16k = \
 			FFTConfiguration(64,
 				FFTConfiguration(16,
 					fft4_scale_none,
-					fft4_large_scale_none),
+					fft4_scale_none),
 				fft4_scale_none),
 			FFTConfiguration(64, 
 				FFTConfiguration(16,
 					fft4_large_scale_div_sqrt_n,
 					fft4_scale_div_n),
-				fft4_scale_div_n),
-			16), # twiddleBits
-		fft4_scale_div_n,
-		16);
+				fft4_scale_div_n)),
+		fft4_scale_div_n);
 
 fft16k_2 = \
 	FFTConfiguration(16*1024,
 		FFTConfiguration(128,
-			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_none),
+			FFTConfiguration(16,  fft4_scale_none, fft4_scale_none),
 			FFTConfiguration(8,  fft4_scale_none, fft2_scale_none)),
 		FFTConfiguration(128,
-			FFTConfiguration(16,  fft4_scale_div_n, fft4_large_scale_div_n),
-			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)),
-		16);
+			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
+			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)));
 
 fft32k = \
 	FFTConfiguration(32*1024,
 		FFTConfiguration(256,
-			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_none),
+			FFTConfiguration(16,  fft4_scale_none, fft4_scale_none),
 			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_div_sqrt_n)),
 		FFTConfiguration(128,
-			FFTConfiguration(16,  fft4_scale_div_n, fft4_large_scale_div_n),
-			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)),
-		16);
+			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
+			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)));
+
+fft32k_wide = \
+	FFTConfiguration(32*1024,
+		FFTConfiguration(256,
+			FFTConfiguration(16,  fft4_scale_none, fft4_scale_none),
+			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_div_sqrt_n)),
+		FFTConfiguration(128,
+			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
+			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)));
+
+fft32k_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
 
 # N = 14
 # perm = range(N)

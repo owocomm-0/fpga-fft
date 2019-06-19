@@ -7,6 +7,8 @@ use work.sr_unsigned;
 use work.complexRam;
 use work.twiddleGenerator;
 use work.complexMultiply;
+use work.complexMultiply2;
+use work.complexMultiplyLarge;
 use work.transposer;
 
 -- data input and output are in transposed order: 0,4,8,12,1,5,9,13,... (for N=16)
@@ -34,7 +36,8 @@ entity fft3step_bram_generic3 is
 			subDelay1,subDelay2: integer := 11;
 			multDelay: integer := 6;
 			customSubOrder: boolean := false;
-			round: boolean := true
+			round: boolean := true;
+			largeMultiplier: boolean := false
 			);
 
 	port(clk: in std_logic;
@@ -97,10 +100,22 @@ begin
 	-- twData is aligned with rph0
 	
 	-- mutliply by twiddles; delay is multDelay cycles
-	mult: entity complexMultiply
-		generic map(in1Bits=>dataBits, in2Bits=>twiddleBits+1,
-					outBits=>dataBits, round=>round)
-		port map(clk, rdata, twdata, multOut);
+g_mult:
+	if largeMultiplier generate
+		mult: entity complexMultiplyLarge
+			generic map(in1Bits=>dataBits, in2Bits=>twiddleBits+1,
+						outBits=>dataBits, round=>round)
+			port map(clk, rdata, twdata, multOut);
+	end generate;
+g_mult2:
+	if not largeMultiplier generate
+		mult: entity complexMultiply2
+			generic map(in1Bits=>dataBits, in2Bits=>twiddleBits+1,
+						outBits=>dataBits, round=>round)
+			port map(clk, rdata, twdata, multOut);
+	end generate;
+	
+	
 	rph3 <= rph0-multDelay+1 when rising_edge(clk);
 	-- subDelay1 + 16 + mult_delay cycles
 	

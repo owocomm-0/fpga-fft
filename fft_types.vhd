@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 
 package fft_types is
 	attribute delay: integer;
-	constant COMPLEXWIDTH: integer := 32;
+	constant COMPLEXWIDTH: integer := 48;
 	type complex is record
 		re: signed(COMPLEXWIDTH-1 downto 0);
 		im: signed(COMPLEXWIDTH-1 downto 0);

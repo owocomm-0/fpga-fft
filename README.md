@@ -9,26 +9,28 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 
 **Zynq-7000**
 
-| Name      | Configuration    | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
-| --------- | ---------------- | ----------- | ---- | ------- | ------- | -------- |
-| fft1024_3 | N=1024, 24 bit   | XC7Z010-1   | 2890 | 2.5     | 28      | 388 MHz<sup>(1)</sup> |
-| fft4096_2 | N=4096, 24 bit   | XC7Z010-1   | 3359 | 8       | 36      | 380 MHz  |
+| Name            | Configuration                   | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
+| --------------- | ------------------------------- | ----------- | ---- | ------- | ------- | -------- |
+| fft1024         | 24b data, 17b twiddle, rounded  | XC7Z010-1   | 2200 | 2.5     | 16      | 370 MHz  |
+| fft1024_wide    | 32b data, 24b twiddle, rounded  | XC7Z010-1   | 3172 | 4       | 32      | 308 MHz  |
+| fft4096         | 24b data, 17b twiddle, rounded  | XC7Z010-1   | 2207 | 8       | 20      | 359 MHz  |
 
 **Kintex-7**
 
-| Name      | Configuration    | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
-| --------- | ---------------- | ----------- | ---- | ------- | ------- | -------- |
-| fft1024_3 | N=1024, 24 bit   | XC7K160T-1  | 2885 | 2.5     | 28      | 458 MHz<sup>(1)</sup> |
-| fft4096_2 | N=4096, 24 bit   | XC7K160T-1  | 3362 | 8       | 36      | 458 MHz<sup>(1)</sup> |
-| fft8192   | N=8192, 24 bit   | XC7K160T-1  | 3562 | 15      | 40      | 455 MHz |
-| fft16k_2  | N=16384, 24 bit  | XC7K160T-1  | 3743 | 29      | 44      | 458 MHz<sup>(1)</sup> |
-| fft32k    | N=32768, 24 bit  | XC7K160T-1  | 4333 | 54.5    | 44      | 458 MHz<sup>(1)</sup> |
+| Name            | Configuration                    | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
+| --------------- | -------------------------------- | ----------- | ---- | ------- | ------- | -------- |
+| fft1024         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2492 | 2.5     | 16      | 458 MHz<sup>(1)</sup> |
+| fft4096         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2601 | 8       | 20      | 452 MHz |
+| fft8192         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2934 | 15      | 24      | 458 MHz<sup>(1)</sup> |
+| fft16k_2        | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 3222 | 29      | 28      | 445 MHz |
+| fft32k          | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 3698 | 55.5    | 28      | 408 MHz |
+| fft32k_wide     | 32b data, 24b twiddle, rounded   | XC7K160T-1  | 4869 | 71      | 56      | 400 MHz |
 
 **Kintex Ultrascale**
 
-| Name      | Configuration    | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
-| --------- | ---------------- | ----------- | ---- | ------- | ------- | -------- |
-| fft4096_2 | N=4096, 24 bit   | XCKU025-1   | 3321 | 9       | 36      | 525 MHz<sup>(1)(2)</sup> |
+| Name      | Configuration                   | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
+| --------- | ------------------------------- | ----------- | ---- | ------- | ------- | -------- |
+| fft4096   | 24b data, 17b twiddle, rounded  | XCKU025-1   | 2071 | 9       | 20      | 525 MHz<sup>(1)(2)</sup> |
 
 <sup>(1)</sup> Bottlenecked by block ram maximum frequency.
 

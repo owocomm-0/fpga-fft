@@ -60,6 +60,8 @@ entity fft4_serial4 is
 end entity;
 
 architecture ar of fft4_serial4 is
+	constant shift: integer := scalingShift(scale, 2);
+	constant bfOffset: integer := iif(scale=SCALE_DIV_N, 1, 0);
 	signal ph, ph1: unsigned(1 downto 0);
 	signal srIn: complexArray(3 downto 0);
 	signal bfIn, bfOut, trIn, trOut: complexArray(1 downto 0);
@@ -74,7 +76,7 @@ begin
 --  bfIn ||                       | i2,i0 | i3,i1 | t2,t0 | t3,t1 | i1,i0 | i3,i2 | t2,t0 | t3,t1 |
 --bfOutP ||                                       | t1,t0 | t3,t2 | o2,o0 | o1,o3 |
 -- bfOut ||                                               | t1,t0 | t3,t2 | o2,o0 | o1,o3 |
-	
+
 	ph <= phase+1 when rising_edge(clk);
 	ph1 <= phase when rising_edge(clk);
 	srIn <= din & srIn(3 downto 1) when rising_edge(clk);
@@ -85,11 +87,11 @@ begin
 	trIn <= bfOut;
 	
 	bf: entity fft4_serial4_bf
-		generic map(dataBits=>dataBits, scale=>scale, round=>round)
+		generic map(dataBits=>dataBits+2, scale=>SCALE_NONE, round=>round, offsetValue=>bfOffset)
 		port map(clk=>clk, din=>bfIn, dout=>bfOutP);
 	
 	tr: entity fft4_serial4_transposer
-		generic map(dataBits=>dataBits)
+		generic map(dataBits=>dataBits+1)
 		port map(clk=>clk, din=>trIn, phase=>ph, dout=>trOut,
 				doutA=>trOutA, doutB=>trOutB);
 	
@@ -99,5 +101,6 @@ begin
 			bfOutP(1) when ph=0 else
 			bfOut1(1) when ph=1 else
 			bfOut1(0);
-	dout <= dout0 when rising_edge(clk);
+	
+	dout <= keepNBits(shift_right(dout0, shift), dataBits) when rising_edge(clk);
 end ar;

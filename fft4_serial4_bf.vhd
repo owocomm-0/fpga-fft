@@ -8,7 +8,8 @@ use work.fft_types.all;
 entity fft4_serial4_bf is
 	generic(dataBits: integer := 18;
 			scale: scalingModes := SCALE_NONE;
-			round: boolean := true);
+			round: boolean := true;
+			offsetValue: integer := 0);
 	port(clk: in std_logic;
 		din: in complexArray(1 downto 0);
 		dout: out complexArray(1 downto 0)
@@ -23,8 +24,8 @@ begin
 		report "fft-2 does not support scaling type SCALE_DIV_SQRT_N"
 			 severity error;
 	a <= din when rising_edge(clk);
-	b(0) <= a(0) + a(1);
-	b(1) <= a(0) - a(1);
+	b(0) <= a(0) + a(1) + to_complex(offsetValue, offsetValue);
+	b(1) <= a(0) - a(1) + to_complex(offsetValue, offsetValue);
 	
 g:	for I in 0 to 1 generate
 	g1: if round and (scale /= SCALE_NONE) generate

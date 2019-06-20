@@ -121,6 +121,16 @@ class FFTBase:
 		self.delay1 = delay1
 		self.dataBits = 'dataBits'
 		self.imports = [entity]
+		self.iBitOrder = range(myLog2(self.N))
+		self.oBitOrder = range(myLog2(self.N))
+	
+	def setInputBitOrder(self, bitOrder):
+		assert len(bitOrder) == myLog2(self.N)
+		self.iBitOrder = bitOrder
+	
+	def setOutputBitOrder(self, bitOrder):
+		assert len(bitOrder) == myLog2(self.N)
+		self.oBitOrder = bitOrder
 	
 	def setOptions(self, rnd, largeMultiplier):
 		pass
@@ -140,13 +150,11 @@ class FFTBase:
 	# inputBitOrder()[0] is the source address of bit 0 in the output of the mapping.
 	# e.g. bitOrder of [1,2,3,0] will transform 0b0001 to 0b1000
 	def inputBitOrder(self):
-		O = myLog2(self.N)
-		return range(O)
+		return self.iBitOrder
 
 	# see inputBitOrder
 	def outputBitOrder(self):
-		O = myLog2(self.N)
-		return range(O)
+		return self.oBitOrder
 	
 	def sigIn(self, id):
 		return id + 'in'
@@ -581,12 +589,17 @@ fft4_large_scale_div_sqrt_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', fft
 #fft4_large_scale_div_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N', fft4_delay)
 
 
-fft4_delay = 12
-fft4_large_scale_none = FFTBase(4, 'fft4_serial4', 'SCALE_NONE', fft4_delay)
-fft4_large_scale_div_n = FFTBase(4, 'fft4_serial4', 'SCALE_DIV_N', fft4_delay)
-fft4_scale_none = fft4_large_scale_none
-fft4_scale_div_n = fft4_large_scale_div_n
+#fft4_delay = 12
+#fft4_scale_none = FFTBase(4, 'fft4_serial4', 'SCALE_NONE', fft4_delay)
+#fft4_scale_div_n = FFTBase(4, 'fft4_serial4', 'SCALE_DIV_N', fft4_delay)
 
+
+
+fft4_delay = 11
+fft4_scale_none = FFTBase(4, 'fft4_serial5_natural', 'SCALE_NONE', fft4_delay)
+fft4_scale_div_n = FFTBase(4, 'fft4_serial5_natural', 'SCALE_DIV_N', fft4_delay)
+fft4_scale_none.setOutputBitOrder([1,0])
+fft4_scale_div_n.setOutputBitOrder([1,0])
 
 
 fft16 = \
@@ -594,14 +607,14 @@ fft16 = \
 		fft4_scale_none,
 		fft4_scale_div_n);
 
-fft16_scale_none = FFTConfiguration(16,  fft4_large_scale_none, fft4_scale_none);
+fft16_scale_none = FFTConfiguration(16,  fft4_scale_none, fft4_scale_none);
 fft16_scale_div_n = FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n);
 
 # scales by 1/4. 32 is not a perfect square so 1/sqrt(n) is not possible
 fft32 = \
 	FFTConfiguration(32,
 		FFTConfiguration(8, 
-			fft4_large_scale_none,
+			fft4_scale_none,
 			fft2_scale_none),
 		fft4_scale_div_n);
 

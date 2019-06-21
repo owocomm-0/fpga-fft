@@ -58,7 +58,8 @@ architecture ar of fft4_serial5_natural is
 	constant shift: integer := scalingShift(scale, 2);
 	constant bfOffset: integer := iif(scale=SCALE_DIV_N, 1, 0);
 	signal ph, ph1: unsigned(1 downto 0);
-	signal srIn: complexArray(3 downto 0);
+	--signal srIn: complexArray(3 downto 0);
+	signal iReg, iReg2, iReg3: complex;
 	signal bfIn, bfOutP, trIn: complexArray(1 downto 0);
 	signal trOutA, trOutB: complexArray(1 downto 0);
 	signal bfOut0del, dout0: complex;
@@ -67,15 +68,23 @@ begin
 --   clk ||   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |
 --    ph ||   0   |   1   |   2   |   3   |   0   |   1   |   2   |   3   |   0   |   1   |   2   |   3   |   0   |   1   |
 --  srIn || 3210  | 0321  | 1032  | 2103  | 3210  | 0321  | 1032  | 2103  | 3210  | 0321  | 1032  | 2103  |
+--  iReg ||       |       0       |   2   |   3   |       0       |
+-- iReg2 ||                       |   0   |       |   3   |
+-- iReg3 ||               |               1               |
 --  bfIn ||                       | i2,i0 |       | i3,i1 |       | i2,i0 | t2,t0 | i3,i1 | t3,t1 |
 --bfOutP ||                                       | t1,t0 |       | t3,t2 |       | t1,t0 | o2,o0 | t3,t2 | o3,o1 |
 -- trOut ||                                                               | t2,t0 |       | t3,t1 |
 
 	ph <= phase+1 when rising_edge(clk);
 	ph1 <= phase when rising_edge(clk);
-	srIn <= din & srIn(3 downto 1) when rising_edge(clk);
-	bfIn <= (srIn(3), srIn(1)) when ph=3 else
-			(to_complex(srIn(2).re, srIn(0).im), to_complex(srIn(0).re, srIn(2).im)) when ph=1 else
+	--srIn <= din & srIn(3 downto 1) when rising_edge(clk);
+	
+	iReg <= din when (ph /= 1) and rising_edge(clk);
+	iReg2 <= iReg when rising_edge(clk);
+	iReg3 <= din when (ph = 1) and rising_edge(clk);
+	
+	bfIn <= (iReg, iReg2) when ph=3 else
+			(to_complex(iReg2.re, iReg3.im), to_complex(iReg3.re, iReg2.im)) when ph=1 else
 			trOutA when ph=0 else
 			trOutB;
 	trIn <= bfOutP;

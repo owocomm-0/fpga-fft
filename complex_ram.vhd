@@ -27,7 +27,7 @@ architecture a of complexRam is
 	--ram
 	type ram1t is array(depth-1 downto 0) of
 		std_logic_vector(width-1 downto 0);
-	signal ram1: ram1t := (others=>(others=>'0'));
+	signal ram1: ram1t; -- := (others=>(others=>'0'));
 	
 	signal rdaddr1: unsigned(depthOrder-1 downto 0);
 	signal wrdata1: std_logic_vector(width-1 downto 0);

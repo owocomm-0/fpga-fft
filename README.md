@@ -28,9 +28,10 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 
 **Kintex Ultrascale**
 
-| Name      | Configuration                   | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
-| --------- | ------------------------------- | ----------- | ---- | ------- | ------- | -------- |
-| fft4096   | 24b data, 17b twiddle, rounded  | XCKU025-1   | 2071 | 9       | 20      | 525 MHz<sup>(1)(2)</sup> |
+| Name         | Configuration                   | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
+| ------------ | ------------------------------- | ----------- | ---- | ------- | ------- | -------- |
+| fft4096      | 24b data, 17b twiddle, rounded  | XCKU025-1   | 2071 | 9       | 20      | 525 MHz<sup>(1)(2)</sup> |
+| fft8192_wide | 24b data, 24b twiddle, rounded  | XCKU025-1   | 3137 | 16.5    | 48      | 525 MHz<sup>(1)(2)</sup> |
 
 <sup>(1)</sup> Bottlenecked by block ram maximum frequency.
 

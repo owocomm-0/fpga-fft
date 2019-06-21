@@ -17,7 +17,7 @@ entity complexMultiplyLarge is
 end entity;
 architecture a of complexMultiplyLarge is
 	constant intermediateBits: integer := in1Bits + in2Bits;
-	constant internalBits: integer := iif(intermediateBits>48, 48, intermediateBits);
+	constant internalBits: integer := iif((intermediateBits-2)>48, 48, intermediateBits-2);
 	signal a,b,a2,b2,a3,b3: signed(in1Bits-1 downto 0);
 	signal c,d,c2,d2,c3,d3: signed(in2Bits-1 downto 0);
 	

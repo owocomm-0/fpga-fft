@@ -157,11 +157,14 @@ class FFTBase:
 		return self.oBitOrder
 	
 	def sigIn(self, id):
-		return id + 'in'
+		return id + 'din'
 	def sigOut(self, id):
-		return id + 'out'
+		return id + 'dout'
 	def sigPhase(self, id):
 		return id + 'phase'
+
+	def getImports(self):
+		return self.imports
 
 	def genConstants(self, id):
 		constantsArr = ['N', self.N,
@@ -176,13 +179,13 @@ class FFTBase:
 
 	def genDeclarations(self, id):
 		return '''
-signal {0:s}in, {0:s}out: complex;
+signal {0:s}din, {0:s}dout: complex;
 signal {0:s}phase: unsigned({1:d}-1 downto 0);'''.format(id, myLog2(self.N))
 
 	def genBody(self, id):
 		template = '''%sinst: entity %s
 	generic map(dataBits=>%s, scale=>%s)
-	port map(clk=>clk, din=>%sin, phase=>%sphase, dout=>%sout);'''
+	port map(clk=>clk, din=>%sdin, phase=>%sphase, dout=>%sdout);'''
 		return template % (id, self.entity,
 					self.dataBits, self.scale,
 					id, id, id);
@@ -272,11 +275,17 @@ class FFTConfiguration:
 		return tmp
 	
 	def sigIn(self, id):
-		return id + 'in'
+		return id + 'din'
 	def sigOut(self, id):
-		return id + 'out'
+		return id + 'dout'
 	def sigPhase(self, id):
 		return id + 'phase'
+	
+	def getImports(self):
+		ret = self.imports
+		ret.extend(self.sub1.getImports())
+		ret.extend(self.sub2.getImports())
+		return ret
 	
 	def genConstants(self, id):
 		constantsArr = ['N', self.N,
@@ -295,11 +304,19 @@ class FFTConfiguration:
 		
 		return constants
 	
-	def genDeclarations(self, id, sub1, sub2):
-		signals = '''
-signal {0:s}in, {0:s}out, {0:s}rbIn: complex;
+	def genDeclarations(self, id, sub1, sub2, includePorts=True):
+		sub1Order = myLog2(self.sub1.N)
+		sub2Order = myLog2(self.sub2.N)
+		signals = ''
+		if includePorts:
+			signals = '''
+signal {0:s}din, {0:s}dout: complex;
 signal {0:s}phase: unsigned({0:s}order-1 downto 0);
-signal {0:s}bitPermIn,{0:s}bitPermOut: unsigned({1:s}order-1 downto 0);
+'''
+
+		signals += '''
+signal {0:s}rbIn: complex;
+signal {0:s}bitPermIn,{0:s}bitPermOut: unsigned({1:d}-1 downto 0);
 
 -- twiddle generator
 signal {0:s}twAddr: unsigned({0:s}order-1 downto 0);
@@ -308,22 +325,26 @@ signal {0:s}twData: complex;
 signal {0:s}romAddr: unsigned({0:s}order-4 downto 0);
 signal {0:s}romData: std_logic_vector({0:s}twiddleBits*2-3 downto 0);
 '''
-		signals = signals.format(id,sub1,sub2)
+		signals = signals.format(id, sub1Order, sub2Order)
 		
 		if self.sub2Transposer:
 			signals += self.reorderPerm.genDeclarations(id)
 			signals += '''
-signal {0:s}rbInPhase: unsigned({2:s}order-1 downto 0);
-'''.format(id,sub1,sub2)
+signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
+'''.format(id, sub1Order, sub2Order)
 		
 		return signals
 		
 	def genBody(self, id, subId1, subId2):
 		bOrder1 = bitOrderToVHDL(self.sub1.outputBitOrder(), id + 'bitPermIn')
 		
+		sub1order = myLog2(self.sub1.N)
+		sub2order = myLog2(self.sub2.N)
+		sub1delay = self.sub1.delay()
+		sub2delay = self.sub1.delay()
+		
 		sub2in = self.sub2.sigIn(subId2)
 		sub2phase = self.sub2.sigPhase(subId2)
-		sub2delay = self.sub2.delay()
 		
 		if self.sub2Transposer:
 			sub2in = id + 'rbIn'
@@ -333,32 +354,35 @@ signal {0:s}rbInPhase: unsigned({2:s}order-1 downto 0);
 		#         0     1       2       3       4             5       6     
 		params = [id, subId1, subId2, sub2in, sub2delay, sub2phase, bOrder1,
 		#              7          8              9                    10
-					self.N, self.multDelay, boolStr(self.rnd), boolStr(self.largeMultiplier)]
+					self.N, self.multDelay, boolStr(self.rnd), boolStr(self.largeMultiplier),
+		#              11         12         13         14
+					sub1order, sub2order, sub1delay, sub2delay
+					]
 		body = '''
 {0:s}core: entity fft3step_bram_generic3
 	generic map(
 		dataBits=>dataBits,
 		twiddleBits=>{0:s}twiddleBits,
-		subOrder1=>{1:s}order,
-		subOrder2=>{2:s}order,
+		subOrder1=>{11:d},
+		subOrder2=>{12:d},
 		twiddleDelay=>{0:s}twiddleDelay,
 		multDelay=>{8:d},
-		subDelay1=>{1:s}delay,
+		subDelay1=>{13:d},
 		subDelay2=>{4:d},
 		round=>{9:s},
 		customSubOrder=>true,
 		largeMultiplier=>{10:s})
 	port map(
 		clk=>clk, phase=>{0:s}phase, phaseOut=>open,
-		subOut1=>{1:s}out,
+		subOut1=>{1:s}dout,
 		subIn2=>{3:s},
 		subPhase2=>{5:s},
 		twAddr=>{0:s}twAddr, twData=>{0:s}twData,
 		bitPermIn=>{0:s}bitPermIn, bitPermOut=>{0:s}bitPermOut);
 	
-{1:s}in <= {0:s}in;
-{0:s}out <= {2:s}out;
-{1:s}phase <= {0:s}phase({1:s}order-1 downto 0);
+{1:s}din <= {0:s}din;
+{0:s}dout <= {2:s}dout;
+{1:s}phase <= {0:s}phase({11:d}-1 downto 0);
 {0:s}bitPermOut <= {6:s};
 '''
 		
@@ -387,13 +411,84 @@ signal {0:s}rbInPhase: unsigned({2:s}order-1 downto 0);
 	
 {0:s}rb: entity reorderBuffer
 	generic map(N=>{1:d}, dataBits=>dataBits, repPeriod=>{7:d}, bitPermDelay=>0, dataPathDelay=>{6:d})
-	port map(clk, din=>{0:s}rbIn, phase=>{0:s}rbInPhase, dout=>{5:s}in,
+	port map(clk, din=>{0:s}rbIn, phase=>{0:s}rbInPhase, dout=>{5:s}din,
 		bitPermIn=>{2:s}, bitPermCount=>{3:s}, bitPermOut=>{4:s});
 	
 {5:s}phase <= {0:s}rbInPhase-{6:d};
 	
 '''.format(*params)
 		return body
+	
+	def _genSubInst(self, instanceName, entityName, obj):
+		if isinstance(obj, FFTBase):
+			return obj.genBody(instanceName)
+		
+		line1 = '{0:s}: entity {1:s} generic map(dataBits=>dataBits, twBits=>twBits)'.format(instanceName, entityName)
+		line2 = '	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}dout);'.format(instanceName)
+		return line1 + '\n' + line2
+	
+	def genEntity(self, entityName, sub1Name, sub2Name):
+		code = '''
+library ieee;
+library work;
+use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+USE ieee.math_real.log2;
+USE ieee.math_real.ceil;
+use work.fft_types.all;
+use work.fft3step_bram_generic3;
+use work.twiddleGenerator;
+use work.transposer;
+use work.reorderBuffer;
+'''
+		imports = self.imports
+		imports.extend([sub1Name, sub2Name])
+		importsSet = set()
+		for imp in imports:
+			if not imp in importsSet:
+				importsSet.add(imp)
+				code += 'use work.%s;\n' % imp
+		
+		params = [bitOrderDescription(self.inputBitOrder()),
+				bitOrderDescription(self.outputBitOrder()),
+				self.delay(),
+				entityName,
+				myLog2(self.N),
+				myLog2(self.sub1.N),
+				myLog2(self.sub2.N)]
+		code += '''
+-- data input bit order: {0:s}
+-- data output bit order: {1:s}
+-- phase should be 0,1,2,3,4,5,6,...
+-- delay is {2:d}
+entity {3:s} is
+	generic(dataBits: integer := 24;
+			twBits: integer := 12);
+	port(clk: in std_logic;
+		din: in complex;
+		phase: in unsigned({4:d}-1 downto 0);
+		dout: out complex
+		);
+end entity;
+architecture ar of {3:s} is
+	signal sub1din, sub1dout, sub2din, sub2dout: complex;
+	signal sub1phase: unsigned({5:d}-1 downto 0);
+	signal sub2phase: unsigned({6:d}-1 downto 0);
+'''.format(*params)
+		
+		code += indent(self.genConstants(''), 1)
+		code += '\n\n\t--=======================================\n\n'
+		code += indent(self.genDeclarations('', 'sub1', 'sub2', False), 1)
+		code += '''
+begin
+'''
+		code += indent(self.genBody('', 'sub1', 'sub2'), 1)
+		code += indent(self._genSubInst('sub1', sub1Name, self.sub1), 1)
+		code += indent(self._genSubInst('sub2', sub2Name, self.sub2), 1)
+		code += '''
+end ar;
+'''
+		return code
 
 def indent(s, level):
 	sp = '\t' * level
@@ -401,7 +496,7 @@ def indent(s, level):
 	for line in s.split('\n'):
 		if len(line) == 0: continue
 		ret.append(sp + line)
-	
+	ret.append('')
 	return '\n'.join(ret)
 
 def genDeclarations(fft, id, level, fnName='genDeclarations'):
@@ -500,6 +595,52 @@ end ar;
 '''
 	return code
 
+def _collectInstances(instanceMap, instanceList, fft):
+	if not isinstance(fft, FFTConfiguration):
+		return
+	_collectInstances(instanceMap, instanceList, fft.sub1)
+	_collectInstances(instanceMap, instanceList, fft.sub2)
+	key = fft.descriptionStr()
+	if not key in instanceMap:
+		instanceMap[key] = fft
+		instanceList.append(fft)
+
+def genFFTSeparated(fft, entityName):
+	# collect all instances
+	instanceMap = {}
+	instanceList = [] # in topological order; dependencies come first
+	_collectInstances(instanceMap, instanceList, fft)
+	
+	# name all instances
+	fftSizes = {}
+	for inst in instanceList:
+		if inst.N in fftSizes:
+			fftSizes[inst.N] += 1
+			inst._name = entityName + '_sub' + str(inst.N) + '_' + str(fftSizes[inst.N])
+		else:
+			fftSizes[inst.N] = 1
+			inst._name = entityName + '_sub' + str(inst.N)
+	
+	fft._name = entityName
+	
+	# generate all instances
+	code = []
+	for inst in instanceList:
+		sub1Name = ''
+		sub2Name = ''
+		if isinstance(inst.sub1, FFTConfiguration):
+			sub1Name = inst.sub1._name
+		else:
+			sub1Name = inst.sub1.entity
+		
+		if isinstance(inst.sub2, FFTConfiguration):
+			sub2Name = inst.sub2._name
+		else:
+			sub2Name = inst.sub2.entity
+		
+		code.append(inst.genEntity(inst._name, sub1Name, sub2Name))
+	
+	return '\n\n'.join(code)
 
 def genReorderer(fft, isOutput, rows, entityName):
 	colBits = myLog2(fft.N)
@@ -699,6 +840,17 @@ fft8192 = \
 			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
 			fft4_scale_div_n));
 
+fft8192_wide = \
+	FFTConfiguration(8192,
+		FFTConfiguration(128,
+			FFTConfiguration(16,  fft4_scale_none, fft4_scale_none),
+			FFTConfiguration(8,  fft4_scale_none, fft2_scale_div_n)),
+		FFTConfiguration(64, 
+			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
+			fft4_scale_div_n));
+fft8192_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
+
+
 fft16k = \
 	FFTConfiguration(16*1024,
 		FFTConfiguration(4096,
@@ -791,7 +943,9 @@ if outpType == 'fft':
 	vhdlCode += '\n\n'
 
 	print vhdlCode
-	print genFFT(instance, entityName=instanceName)
+	#print genFFT(instance, entityName=instanceName)
+	#print instance.genEntity(instanceName, 'aaa', 'bbb')
+	print genFFTSeparated(instance, instanceName)
 
 	print '\n-- instantiation (python):\n'
 	print commentOut(instance.configurationStr())

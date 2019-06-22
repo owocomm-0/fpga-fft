@@ -1,12 +1,12 @@
 -- instance name: fft1024_wide
 
 -- layout:
---1024: twiddleBits=twBits, delay=1226
---	64: twiddleBits=twBits, delay=130
+--1024: twiddleBits=twBits, delay=1227
+--	64: twiddleBits=twBits, delay=131
 --		16: twiddleBits=twBits, delay=47
 --			4: base, 'fft4_serial5_natural', scale='SCALE_NONE', delay=11
 --			4: base, 'fft4_serial5_natural', scale='SCALE_NONE', delay=11
---		4: base, 'fft4_serial3', scale='SCALE_DIV_SQRT_N', delay=10
+--		4: base, 'fft4_serial5_natural', scale='SCALE_DIV_SQRT_N', delay=11
 --	16: twiddleBits=twBits, delay=47
 --		4: base, 'fft4_serial5_natural', scale='SCALE_DIV_N', delay=11
 --		4: base, 'fft4_serial5_natural', scale='SCALE_DIV_N', delay=11
@@ -112,12 +112,12 @@ use work.transposer;
 use work.reorderBuffer;
 use work.twiddleRom64;
 use work.fft1024_wide_sub16;
-use work.fft4_serial3;
+use work.fft4_serial5_natural;
 
 -- data input bit order: (5 downto 0) [1,0,3,2,5,4]
--- data output bit order: (5 downto 0) [1,0,2,3,4,5]
+-- data output bit order: (5 downto 0) [0,1,2,3,4,5]
 -- phase should be 0,1,2,3,4,5,6,...
--- delay is 130
+-- delay is 131
 entity fft1024_wide_sub64 is
 	generic(dataBits: integer := 24;
 			twBits: integer := 12);
@@ -135,7 +135,7 @@ architecture ar of fft1024_wide_sub64 is
 	constant twiddleBits: integer := twBits;
 	constant twiddleDelay: integer := 7;
 	constant order: integer := 6;
-	constant delay: integer := 130;
+	constant delay: integer := 131;
 
 
 	--=======================================
@@ -179,7 +179,7 @@ begin
 	rom: entity twiddleRom64 port map(clk, romAddr,romData);
 	sub1: entity fft1024_wide_sub16 generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
-	sub2inst: entity fft4_serial3
+	sub2inst: entity fft4_serial5_natural
 		generic map(dataBits=>dataBits, scale=>SCALE_DIV_SQRT_N)
 		port map(clk=>clk, din=>sub2din, phase=>sub2phase, dout=>sub2dout);
 
@@ -289,9 +289,9 @@ use work.fft1024_wide_sub64;
 use work.fft1024_wide_sub16_2;
 
 -- data input bit order: (9 downto 0) [1,0,3,2,5,4,9,8,7,6]
--- data output bit order: (9 downto 0) [0,1,2,3,5,4,6,7,8,9]
+-- data output bit order: (9 downto 0) [0,1,2,3,4,5,6,7,8,9]
 -- phase should be 0,1,2,3,4,5,6,...
--- delay is 1226
+-- delay is 1227
 entity fft1024_wide is
 	generic(dataBits: integer := 24;
 			twBits: integer := 12);
@@ -309,7 +309,7 @@ architecture ar of fft1024_wide is
 	constant twiddleBits: integer := twBits;
 	constant twiddleDelay: integer := 7;
 	constant order: integer := 10;
-	constant delay: integer := 1226;
+	constant delay: integer := 1227;
 
 
 	--=======================================
@@ -335,8 +335,8 @@ begin
 			subOrder2=>4,
 			twiddleDelay=>twiddleDelay,
 			multDelay=>9,
-			subDelay1=>130,
-			subDelay2=>146,
+			subDelay1=>131,
+			subDelay2=>147,
 			round=>true,
 			customSubOrder=>true,
 			largeMultiplier=>true)
@@ -351,7 +351,7 @@ begin
 	sub1din <= din;
 	dout <= sub2dout;
 	sub1phase <= phase(6-1 downto 0);
-	bitPermOut <= bitPermIn(1)&bitPermIn(0)&bitPermIn(2)&bitPermIn(3)&bitPermIn(4)&bitPermIn(5);
+	bitPermOut <= bitPermIn(0)&bitPermIn(1)&bitPermIn(2)&bitPermIn(3)&bitPermIn(4)&bitPermIn(5);
 	tw: entity twiddleGenerator generic map(twiddleBits, order)
 		port map(clk, twAddr, twData, romAddr, romData);
 	rom: entity twiddleRom1024 port map(clk, romAddr,romData);
@@ -380,7 +380,7 @@ end ar;
 --			FFTBase(4, 'fft4_serial5_natural', 'SCALE_NONE', 11),
 --			FFTBase(4, 'fft4_serial5_natural', 'SCALE_NONE', 11),
 --		twiddleBits='twBits'),
---		FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', 10),
+--		FFTBase(4, 'fft4_serial5_natural', 'SCALE_DIV_SQRT_N', 11),
 --	twiddleBits='twBits'),
 --	FFTConfiguration(16, 
 --		FFTBase(4, 'fft4_serial5_natural', 'SCALE_DIV_N', 11),

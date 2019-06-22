@@ -18,10 +18,10 @@ architecture behaviour of test_fft256_serial is
 	signal phase: unsigned(7 downto 0);
 	signal dout: complex;
 	signal debug1: integer;
-	constant delay: integer := 376;
+	constant delay: integer := 379;
 begin
 	
-	fft: entity fft256 generic map(twBits=>24)
+	fft: entity fft256 generic map(dataBits=>32, twBits=>24)
 		port map(clk,din,phase,dout);
 	process
 		variable l : line;

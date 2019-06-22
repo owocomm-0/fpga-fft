@@ -28,7 +28,7 @@ architecture behaviour of test_transposer is
 	signal phase2: unsigned(4 downto 0) := "00000";
 begin
 	addrGen: entity transposer_addrGen generic map(1,2)
-		port map(clk, phase, addr);
+		port map(clk, '1', phase, addr);
 	
 	transp: entity transposer generic map(1,2,10)
 		port map(clk, din, phase, dout);

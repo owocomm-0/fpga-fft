@@ -20,7 +20,7 @@ architecture behaviour of test_fft1024 is
 	signal phase: unsigned(O-1 downto 0);
 	signal dout: complex;
 	signal debug1: integer;
-	constant delay: integer := 1226;
+	constant delay: integer := 1227;
 begin
 	fft: entity fft1024_wide generic map(dataBits=>32, twBits=>24)
 		port map(clk,din,phase,dout);
@@ -67,9 +67,9 @@ begin
 			
 
 -- data input bit order: (9 downto 0) [1,0,3,2,5,4,9,8,7,6]
--- data output bit order: (9 downto 0) [0,1,2,3,5,4,6,7,8,9]
+-- data output bit order: (9 downto 0) [0,1,2,3,4,5,6,7,8,9]
 			inputPerm := ii(1)&ii(0)&ii(3)&ii(2)&ii(5)&ii(4)&ii(9)&ii(8)&ii(7)&ii(6);
-			outputPerm := oi(0)&oi(1)&oi(2)&oi(3)&oi(5)&oi(4)&oi(6)&oi(7)&oi(8)&oi(9);
+			outputPerm := oi(0)&oi(1)&oi(2)&oi(3)&oi(4)&oi(5)&oi(6)&oi(7)&oi(8)&oi(9);
 			
 			
 			i1 := to_integer(inputPerm) + i2*N;

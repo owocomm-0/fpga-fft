@@ -56,11 +56,12 @@ entity fft4_serial5_natural is
 end entity;
 architecture ar of fft4_serial5_natural is
 	constant shift: integer := scalingShift(scale, 2);
-	constant bfOffset: integer := iif(scale=SCALE_DIV_N, 1, 0);
 	signal ph, ph1: unsigned(1 downto 0);
 	--signal srIn: complexArray(3 downto 0);
 	signal iReg, iReg2, iReg3: complex;
 	signal bfIn, bfOutP, trIn: complexArray(1 downto 0);
+	signal bfRound: std_logic;
+	
 	signal trOutA, trOutB: complexArray(1 downto 0);
 	signal bfOut0del, dout0: complex;
 begin
@@ -87,11 +88,13 @@ begin
 			(to_complex(iReg2.re, iReg3.im), to_complex(iReg3.re, iReg2.im)) when ph=1 else
 			trOutA when ph=0 else
 			trOutB;
+	bfRound <= '1' when ph=0 or ph=2 else
+				'0';
 	trIn <= bfOutP;
 	
 	bf: entity fft4_serial4_bf
-		generic map(dataBits=>dataBits+2, scale=>SCALE_NONE, round=>round, offsetValue=>0)
-		port map(clk=>clk, din=>bfIn, dout=>bfOutP);
+		generic map(dataBits=>dataBits+2, carryPosition=>shift-1)
+		port map(clk=>clk, din=>bfIn, roundIn=>bfRound, dout=>bfOutP);
 	
 	tr: entity fft4_serial5_natural_transposer
 		generic map(dataBits=>dataBits+1)

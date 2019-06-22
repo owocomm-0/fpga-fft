@@ -57,10 +57,12 @@ entity fft4_serial5 is
 end entity;
 architecture ar of fft4_serial5 is
 	constant shift: integer := scalingShift(scale, 2);
-	constant bfOffset: integer := iif(scale=SCALE_DIV_N, 1, 0);
+	
 	signal ph, ph1: unsigned(1 downto 0);
 	signal srIn: complexArray(1 downto 0);
 	signal bfIn, bfOutP, trIn: complexArray(1 downto 0);
+	signal bfRound: std_logic;
+	
 	signal trOutA, trOutB: complexArray(1 downto 0);
 	signal bfOut0del, dout0: complex;
 begin
@@ -79,11 +81,13 @@ begin
 			(to_complex(srIn(1).re, srIn(0).im), to_complex(srIn(0).re, srIn(1).im)) when ph=0 else
 			trOutA when ph=3 else
 			trOutB;
+	bfRound <= '1' when ph=3 or ph=1 else
+				'0';
 	trIn <= bfOutP;
 	
 	bf: entity fft4_serial4_bf
-		generic map(dataBits=>dataBits+2, scale=>SCALE_NONE, round=>round, offsetValue=>0)
-		port map(clk=>clk, din=>bfIn, dout=>bfOutP);
+		generic map(dataBits=>dataBits+2, carryPosition=>shift-1)
+		port map(clk=>clk, din=>bfIn, roundIn=>bfRound, dout=>bfOutP);
 	
 	tr: entity fft4_serial5_transposer
 		generic map(dataBits=>dataBits+1)

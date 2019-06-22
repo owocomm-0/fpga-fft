@@ -3,3 +3,4 @@
 NAME="$1"
 ./gen_fft.py fft "$NAME" > generated/"$NAME".vhd
 ./gen_fft.py reorderer "$NAME" > generated/"$NAME"_reorderer.vhd
+./gen_fft.py wrapper "$NAME" > generated/"$NAME"_wrapper.vhd

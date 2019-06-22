@@ -605,6 +605,7 @@ def _collectInstances(instanceMap, instanceList, fft):
 		instanceMap[key] = fft
 		instanceList.append(fft)
 
+# generate the complete code for a fft instance and its dependencies
 def genFFTSeparated(fft, entityName):
 	# collect all instances
 	instanceMap = {}
@@ -642,6 +643,8 @@ def genFFTSeparated(fft, entityName):
 	
 	return '\n\n'.join(code)
 
+# generate a input/output reorderer for converting between natural order
+# and fft order, with `rows` interleaved channels
 def genReorderer(fft, isOutput, rows, entityName):
 	colBits = myLog2(fft.N)
 	rowBits = myLog2(rows)
@@ -711,6 +714,71 @@ begin
 end ar;
 '''
 	return code
+
+
+# generate a wrapper for fft that accepts and outputs data in natural order
+def genReordererWrapper(fft, rows, entityName, fftName):
+	colBits = myLog2(fft.N)
+	rowBits = myLog2(rows)
+	totalBits = colBits + rowBits
+	reorderDelay = fft.N * rows
+	delay = reorderDelay*2 + fft.delay()
+	
+	code = '''
+library ieee;
+library work;
+use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+USE ieee.math_real.log2;
+USE ieee.math_real.ceil;
+use work.fft_types.all;
+use work.{0:s};
+use work.{0:s}_ireorderer{1:d};
+use work.{0:s}_oreorderer{1:d};
+'''.format(fftName, rows)
+	
+	#          0         1           2       3
+	params = [delay, entityName, totalBits, rows]
+	code += '''
+-- {3:d} interleaved channels, natural order
+-- phase should be 0,1,2,3,4,5,6,...
+-- din should be ch0d0, ch1d0, ch2d0, ch3d0, ch0d1, ch1d1, ... (if 4 channels)
+-- delay is {0:d}
+entity {1:s} is
+	generic(dataBits: integer := 24; twBits: integer := 12);
+	port(clk: in std_logic;
+		din: in complex;
+		phase: in unsigned({2:d}-1 downto 0);
+		dout: out complex
+		);
+end entity;
+architecture ar of {1:s} is
+	signal core_din, core_dout: complex;
+	signal core_phase: unsigned({2:d}-1 downto 0);
+	signal oreorderer_phase: unsigned({2:d}-1 downto 0);
+'''.format(*params)
+
+	#          0         1      2         3            4
+	params = [fftName, rows, colBits, reorderDelay, fft.delay()]
+	code += '''
+begin
+	ireorder: entity {0:s}_ireorderer{1:d} generic map(dataBits=>dataBits)
+		port map(clk=>clk, phase=>phase, din=>din, dout=>core_din);
+	
+	core_phase <= phase - {3:d} + 1 when rising_edge(clk);
+	
+	core: entity {0:s} generic map(dataBits=>dataBits, twBits=>twBits)
+		port map(clk=>clk, phase=>core_phase({2:d}-1 downto 0), din=>core_din, dout=>core_dout);
+	
+	oreorderer_phase <= core_phase - {4:d} + 1 when rising_edge(clk);
+	
+	oreorderer: entity {0:s}_oreorderer{1:d} generic map(dataBits=>dataBits)
+		port map(clk=>clk, phase=>oreorderer_phase, din=>core_dout, dout=>dout);
+end ar;
+'''.format(*params)
+	return code
+
+
 
 #fft2_scale_none = FFTBase(2, 'fft2_serial2', 'SCALE_NONE', 3)
 #fft2_scale_div_n = FFTBase(2, 'fft2_serial2', 'SCALE_DIV_N', 3)
@@ -951,5 +1019,12 @@ if outpType == 'fft':
 	print commentOut(instance.configurationStr())
 
 if outpType == 'reorderer':
-	print genReorderer(instance, False, 2, instanceName + '_ireorderer')
-	print genReorderer(instance, True, 2, instanceName + '_oreorderer')
+	# generate reorderers for 1, 2, and 4 rows of data
+	for rows in [1,2,4]:
+		print genReorderer(instance, False, rows, instanceName + '_ireorderer' + str(rows))
+		print genReorderer(instance, True, rows, instanceName + '_oreorderer' + str(rows))
+
+if outpType == 'wrapper':
+	for rows in [1,2,4]:
+		print genReordererWrapper(instance, rows, instanceName + '_wrapper' + str(rows), instanceName)
+

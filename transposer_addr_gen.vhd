@@ -26,7 +26,8 @@ architecture ar of transposer_addrGen is
 	--constant shifterMuxStages: integer := integer(ceil(real(stateBits)/real(2)));
 	--constant shifterMuxBits: integer := shifterMuxStages*2;
 	--constant delay: integer := iif(use_stagedBarrelShifter, shifterMuxStages+2, 3);
-	constant delay: integer := 3;
+	constant extraRegister: boolean := ((N1+N2) >= 12);
+	constant delay: integer := 3 + iif(extraRegister, 1, 0);
 	--attribute delay of ar:architecture is shifterMuxStages+1;
 	
 	signal state,stateNext: unsigned(stateBits-1 downto 0) := (others=>'0');
@@ -51,5 +52,10 @@ g2:
 	end generate;
 	-- 3 cycles
 	
-	addr <= ph3;
+g3: if extraRegister generate
+		addr <= ph3 when rising_edge(clk);
+	end generate;
+g4: if not extraRegister generate
+		addr <= ph3;
+	end generate;
 end ar;

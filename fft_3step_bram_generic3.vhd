@@ -9,6 +9,7 @@ use work.twiddleGenerator;
 use work.complexMultiply;
 use work.complexMultiply2;
 use work.complexMultiplyLarge;
+use work.dsp48e1_complexMultiply;
 use work.transposer;
 
 -- data input and output are in transposed order: 0,4,8,12,1,5,9,13,... (for N=16)
@@ -102,10 +103,14 @@ begin
 	-- mutliply by twiddles; delay is multDelay cycles
 g_mult:
 	if largeMultiplier generate
-		mult: entity complexMultiplyLarge
-			generic map(in1Bits=>dataBits, in2Bits=>twiddleBits+1,
+		--mult: entity complexMultiplyLarge
+			--generic map(in1Bits=>dataBits, in2Bits=>twiddleBits+1,
+						--outBits=>dataBits, round=>round)
+			--port map(clk, rdata, twdata, multOut);
+		mult: entity dsp48e1_complexMultiply
+			generic map(in1Bits=>twiddleBits+1, in2Bits=>dataBits,
 						outBits=>dataBits, round=>round)
-			port map(clk, rdata, twdata, multOut);
+			port map(clk, twdata, rdata, multOut);
 	end generate;
 g_mult2:
 	if not largeMultiplier generate

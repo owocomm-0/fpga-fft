@@ -226,10 +226,11 @@ class FFTConfiguration:
 		self.multDelay = 6
 		
 		if largeMultiplier:
-			if rnd:
-				self.multDelay = 9
-			else:
-				self.multDelay = 8
+			self.multDelay = 9
+			#if rnd:
+			#	self.multDelay = 9
+			#else:
+			#	self.multDelay = 8
 	
 	def setOptionsRecursive(self, rnd, largeMultiplier):
 		self.setOptions(rnd, largeMultiplier)

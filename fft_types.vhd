@@ -4,7 +4,16 @@ use ieee.std_logic_1164.all;
 
 package fft_types is
 	attribute delay: integer;
+	
+	-- GLOBAL PARAMETERS
+	
+	-- maximum supported bit width of the signed integers in a complex value
 	constant COMPLEXWIDTH: integer := 48;
+	
+	-- use an additional output register when the address width of the
+	-- ram inside a transposer or reorderBuffer is at least this value
+	constant TRANSPOSER_OREG_THRESHOLD: integer := 7;
+	
 	type complex is record
 		re: signed(COMPLEXWIDTH-1 downto 0);
 		im: signed(COMPLEXWIDTH-1 downto 0);

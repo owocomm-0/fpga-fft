@@ -41,7 +41,7 @@ end entity;
 architecture ar of reorderBuffer is
 	signal din2,dout0: complex;
 	signal iaddr, iaddr2, oaddr: unsigned(N-1 downto 0);
-	constant extraRegister: boolean := (N) > 6;
+	constant extraRegister: boolean := (N) >= TRANSPOSER_OREG_THRESHOLD;
 	constant addrDelays: integer := 3+bitPermDelay;
 	constant totalDelays: integer := iif(extraRegister, 3, 2) + addrDelays;
 	

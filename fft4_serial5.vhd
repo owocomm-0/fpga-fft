@@ -42,7 +42,7 @@ use work.fft_types.all;
 use work.fft4_serial4_bf;
 use work.fft4_serial5_transposer;
 
--- total delay is 9 cycles
+-- total delay is 10 cycles
 -- data input and output are in bit reversed order
 entity fft4_serial5 is
 	generic(dataBits: integer := 18;

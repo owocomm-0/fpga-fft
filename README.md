@@ -12,7 +12,7 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 | Name            | Configuration                   | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
 | --------------- | ------------------------------- | ----------- | ---- | ------- | ------- | -------- |
 | fft1024         | 24b data, 17b twiddle, rounded  | XC7Z010-1   | 2200 | 2.5     | 16      | 370 MHz  |
-| fft1024_wide    | 32b data, 24b twiddle, rounded  | XC7Z010-1   | 3172 | 4       | 32      | 308 MHz  |
+| fft1024_wide    | 32b data, 24b twiddle, rounded  | XC7Z010-1   | 2631 | 4       | 32      | 310 MHz  |
 | fft4096         | 24b data, 17b twiddle, rounded  | XC7Z010-1   | 2207 | 8       | 20      | 359 MHz  |
 
 **Kintex-7**
@@ -23,8 +23,7 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 | fft4096         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2601 | 8       | 20      | 452 MHz |
 | fft8192         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2934 | 15      | 24      | 458 MHz<sup>(1)</sup> |
 | fft16k_2        | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 3222 | 29      | 28      | 445 MHz |
-| fft32k          | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 3698 | 55.5    | 28      | 408 MHz |
-| fft32k_wide     | 32b data, 24b twiddle, rounded   | XC7K160T-1  | 4869 | 71      | 56      | 400 MHz |
+| fft32k_wide     | 32b data, 24b twiddle, rounded   | XC7K160T-1  | 4416 | 74      | 56      | 421 MHz |
 
 **Kintex Ultrascale**
 
@@ -32,6 +31,7 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 | ------------ | ------------------------------- | ----------- | ---- | ------- | ------- | -------- |
 | fft4096      | 24b data, 17b twiddle, rounded  | XCKU025-1   | 2071 | 9       | 20      | 525 MHz<sup>(1)(2)</sup> |
 | fft8192_wide | 24b data, 24b twiddle, rounded  | XCKU025-1   | 3137 | 16.5    | 48      | 525 MHz<sup>(1)(2)</sup> |
+| fft32k_wide  | 32b data, 24b twiddle, rounded  | XCKU025-1   | 4222 | 76      | 56      | 501 MHz<sup>(2)</sup> |
 
 <sup>(1)</sup> Bottlenecked by block ram maximum frequency.
 
@@ -69,15 +69,15 @@ FFTBase represents a base FFT implementation (butterfly), and FFTConfiguration r
 
 Scaling modes for fft4 are SCALE_NONE (do not scale), SCALE_DIV_N (divide by N), and SCALE_DIV_SQRT_N (divide by sqrt(n)). For best accuracy defer scaling until it is necessary (like shown above).
 
-To use a generated FFT core it is necessary to generate all the twiddle ROM sizes used (twiddle ROM size is equal to N). For N <= 32 use gen_twiddle_rom_simple.py, and gen_twiddle_rom.py otherwise.
+To use a generated FFT core it is necessary to generate all the twiddle ROM sizes used (twiddle ROM size is equal to N). For N <= 32 use gen_twiddle_rom_simple.py, and gen_twiddle_rom.py otherwise. On Linux the shell script gen_roms.sh will generate all common twiddle bit sizes and depths.
 
-Data input and output order are described as an address bit permutation. The exact permutation varies by layout and can be found in the comments at the top of generated files.
+Data input and output order are described as an address bit permutation. The exact permutation varies by layout and can be found in the comments at the top of generated files. The script also has an option to generate input/output reorderers for a given FFT definition. For a natural order FFT use do_gen_fft which also generates reorderers and a wrapper (that instantiates and wires up the reorders and the FFT core).
 
-The generated cores can use a mix of 2-butterfly and 4-butterfly instances, and this can be used to fine tune the tradeoff between LUT usage and DSP48 usage.
+When composing a FFT layout prefer 4-FFT butterflies over 2-FFT. The new 4-FFT butterfly (fft4_serial7) internally uses a single double-rate 2-FFT butterfly multiplexed between input and internal transposer data for the lowest possible LUT usage. No DSP units are used inside a 4-FFT butterfly. A 2-FFT butterfly is only needed for FFT sizes that are not perfect square.
 
 **Timing constraints**
 
-A few multi-cycle timing constraints are required (because the inner butterflies deserialize the data and present data every 2 or 4 cycles to the butterfly implementation):
+A few multi-cycle timing constraints are required (because some inner butterfly implementations deserialize the data and present data every 2 or 4 cycles to the butterfly implementation):
 ```
 set_multicycle_path -setup -start -from [get_pins -hierarchical *fftIn_mCycle*/C] -to [get_pins -hierarchical *fftOut_mCycle*/D] 4
 set_multicycle_path -hold -start -from [get_pins -hierarchical *fftIn_mCycle*/C] -to [get_pins -hierarchical *fftOut_mCycle*/D] 3

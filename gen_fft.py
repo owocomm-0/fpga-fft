@@ -806,9 +806,10 @@ fft4_large_scale_div_sqrt_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', fft
 
 
 fft4_delay = 11
-fft4_scale_none = FFTBase(4, 'fft4_serial5_natural', 'SCALE_NONE', fft4_delay)
-fft4_scale_div_sqrt_n = FFTBase(4, 'fft4_serial5_natural', 'SCALE_DIV_SQRT_N', fft4_delay)
-fft4_scale_div_n = FFTBase(4, 'fft4_serial5_natural', 'SCALE_DIV_N', fft4_delay)
+fft4_entity = 'fft4_serial7'
+fft4_scale_none = FFTBase(4, fft4_entity, 'SCALE_NONE', fft4_delay)
+fft4_scale_div_sqrt_n = FFTBase(4, fft4_entity, 'SCALE_DIV_SQRT_N', fft4_delay)
+fft4_scale_div_n = FFTBase(4, fft4_entity, 'SCALE_DIV_N', fft4_delay)
 fft4_scale_none.setOutputBitOrder([1,0])
 fft4_scale_div_sqrt_n.setOutputBitOrder([1,0])
 fft4_scale_div_n.setOutputBitOrder([1,0])
@@ -950,7 +951,7 @@ fft32k = \
 	FFTConfiguration(32*1024,
 		FFTConfiguration(256,
 			FFTConfiguration(16,  fft4_scale_none, fft4_scale_none),
-			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_div_sqrt_n)),
+			FFTConfiguration(16,  fft4_scale_none, fft4_scale_div_sqrt_n)),
 		FFTConfiguration(128,
 			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
 			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)));
@@ -959,7 +960,7 @@ fft32k_wide = \
 	FFTConfiguration(32*1024,
 		FFTConfiguration(256,
 			FFTConfiguration(16,  fft4_scale_none, fft4_scale_none),
-			FFTConfiguration(16,  fft4_scale_none, fft4_large_scale_div_sqrt_n)),
+			FFTConfiguration(16,  fft4_scale_none, fft4_scale_div_sqrt_n)),
 		FFTConfiguration(128,
 			FFTConfiguration(16,  fft4_scale_div_n, fft4_scale_div_n),
 			FFTConfiguration(8,  fft4_scale_div_n, fft2_scale_div_n)));

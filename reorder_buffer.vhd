@@ -5,6 +5,7 @@ use ieee.std_logic_1164.all;
 use work.fft_types.all;
 use work.sr_unsigned;
 use work.complexRam;
+use work.complexRamLUT;
 use work.sr_complex;
 
 -- more general version of transposer;
@@ -44,7 +45,7 @@ architecture ar of reorderBuffer is
 	constant extraRegister: boolean := (N) >= TRANSPOSER_OREG_THRESHOLD;
 	constant addrDelays: integer := 3+bitPermDelay;
 	constant totalDelays: integer := iif(extraRegister, 3, 2) + addrDelays;
-	
+	constant useLUTRam: boolean := (N <= 5);
 	
 	constant stateCount: integer := repPeriod;
 	constant stateBits: integer := ceilLog2(stateCount);
@@ -67,8 +68,17 @@ begin
 	-- addrDelays =
 	-- 3+bitPermDelay cycles
 	
-	ram: entity complexRam generic map(dataBits, N)
-		port map(clk, clk, oaddr, dout0, '1', iaddr2, din2);
+	
+g3: if useLUTRam generate
+		ram: entity complexRamLUT generic map(dataBits, N)
+			port map(clk, clk, oaddr, dout0, '1', iaddr2, din2);
+	end generate;
+g4: if not useLUTRam generate
+		ram: entity complexRam generic map(dataBits, N)
+			port map(clk, clk, oaddr, dout0, '1', iaddr2, din2);
+	end generate;
+
+
 	-- addrDelays+2 cycles
 g1: if extraRegister generate
 		dout <= dout0 when rising_edge(clk);

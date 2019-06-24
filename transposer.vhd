@@ -5,6 +5,7 @@ use ieee.std_logic_1164.all;
 use work.fft_types.all;
 use work.sr_unsigned;
 use work.complexRam;
+use work.complexRamLUT;
 use work.twiddleGenerator;
 use work.complexMultiply;
 use work.transposer_addrGen;
@@ -30,15 +31,23 @@ architecture ar of transposer is
 	signal din2,dout0: complex;
 	signal iaddr, iaddr2, oaddr: unsigned(N1+N2-1 downto 0);
 	constant extraRegister: boolean := (N1+N2) >= TRANSPOSER_OREG_THRESHOLD;
+	constant useLUTRam: boolean := ((N1+N2) <= 5);
 	constant myDelays: integer := iif(extraRegister, 3, 2);
 begin
 	-- read side
 	addrGen: entity transposer_addrGen generic map(N1, N2, myDelays)
 		port map(clk, reorderEnable, phase, oaddr);
 	-- -myDelays cycles
+
+g3: if useLUTRam generate
+		ram: entity complexRamLUT generic map(dataBits, N1+N2)
+			port map(clk, clk, oaddr, dout0, '1', iaddr2, din2);
+	end generate;
+g4: if not useLUTRam generate
+		ram: entity complexRam generic map(dataBits, N1+N2)
+			port map(clk, clk, oaddr, dout0, '1', iaddr2, din2);
+	end generate;
 	
-	ram: entity complexRam generic map(dataBits, N1+N2)
-		port map(clk, clk, oaddr, dout0, '1', iaddr2, din2);
 	-- -myDelays+2 cycles
 g1: if extraRegister generate
 		dout <= dout0 when rising_edge(clk);

@@ -42,12 +42,10 @@ architecture a of twiddleGenerator is
 	signal isZero,isZeroNext: std_logic;
 	
 	signal re,im,re0,im0, re_P, re_M, im_P, im_M: integer;
-	signal outData: complex;
+	signal outData, outData0: complex;
 	
-	--ram
-	--type ram1t is array(romDepth-1 downto 0) of
-	--	unsigned(romWidth-1 downto 0);
-	--signal rom: ram1t;
+	attribute keep: string;
+	attribute keep of outData: signal is "true";
 begin
 	romAddrNext <= rdAddr(depthOrder-4 downto 0)-1 when rdAddr(depthOrder-3)='0'
 				else (not rdAddr(depthOrder-4 downto 0));
@@ -83,7 +81,7 @@ begin
 	ph4 <= ph3 when rising_edge(clk);
 	-- 4+romDelay cycles
 	
-	outData <= to_complex(re_P,im_P)	when ph4=0 else
+	outData0 <= to_complex(re_P,im_P)	when ph4=0 else
 				to_complex(im_P,re_P)	when ph4=1 else
 				to_complex(im_M,re_P)	when ph4=2 else
 				to_complex(re_M,im_P)	when ph4=3 else
@@ -91,6 +89,7 @@ begin
 				to_complex(im_M,re_M)	when ph4=5 else
 				to_complex(im_P,re_M)	when ph4=6 else
 				to_complex(re_P,im_M); --when ph4=7;
-	rdData <= outData when rising_edge(clk);
+	outData <= outData0 when rising_edge(clk);
+	rdData <= outData;
 	-- 5+romDelay cycles
 end a;

@@ -4,12 +4,12 @@
 --1024: twiddleBits=twBits, delay=1227
 --	64: twiddleBits=twBits, delay=131
 --		16: twiddleBits=twBits, delay=47
---			4: base, 'fft4_serial5_natural', scale='SCALE_NONE', delay=11
---			4: base, 'fft4_serial5_natural', scale='SCALE_NONE', delay=11
---		4: base, 'fft4_serial5_natural', scale='SCALE_DIV_SQRT_N', delay=11
+--			4: base, 'fft4_serial7', scale='SCALE_NONE', delay=11
+--			4: base, 'fft4_serial7', scale='SCALE_NONE', delay=11
+--		4: base, 'fft4_serial7', scale='SCALE_DIV_SQRT_N', delay=11
 --	16: twiddleBits=twBits, delay=47
---		4: base, 'fft4_serial5_natural', scale='SCALE_DIV_N', delay=11
---		4: base, 'fft4_serial5_natural', scale='SCALE_DIV_N', delay=11
+--		4: base, 'fft4_serial7', scale='SCALE_DIV_N', delay=11
+--		4: base, 'fft4_serial7', scale='SCALE_DIV_N', delay=11
 
 
 
@@ -25,7 +25,7 @@ use work.twiddleGenerator;
 use work.transposer;
 use work.reorderBuffer;
 use work.twiddleGenerator16;
-use work.fft4_serial5_natural;
+use work.fft4_serial7;
 
 -- data input bit order: (3 downto 0) [1,0,3,2]
 -- data output bit order: (3 downto 0) [0,1,2,3]
@@ -88,10 +88,10 @@ begin
 	sub1phase <= phase(2-1 downto 0);
 	bitPermOut <= bitPermIn(0)&bitPermIn(1);
 	tw: entity twiddleGenerator16 port map(clk, twAddr, twData);
-	sub1inst: entity fft4_serial5_natural
+	sub1inst: entity fft4_serial7
 		generic map(dataBits=>dataBits, scale=>SCALE_NONE)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
-	sub2inst: entity fft4_serial5_natural
+	sub2inst: entity fft4_serial7
 		generic map(dataBits=>dataBits, scale=>SCALE_NONE)
 		port map(clk=>clk, din=>sub2din, phase=>sub2phase, dout=>sub2dout);
 
@@ -112,7 +112,7 @@ use work.transposer;
 use work.reorderBuffer;
 use work.twiddleRom64;
 use work.fft1024_wide_sub16;
-use work.fft4_serial5_natural;
+use work.fft4_serial7;
 
 -- data input bit order: (5 downto 0) [1,0,3,2,5,4]
 -- data output bit order: (5 downto 0) [0,1,2,3,4,5]
@@ -179,7 +179,7 @@ begin
 	rom: entity twiddleRom64 port map(clk, romAddr,romData);
 	sub1: entity fft1024_wide_sub16 generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
-	sub2inst: entity fft4_serial5_natural
+	sub2inst: entity fft4_serial7
 		generic map(dataBits=>dataBits, scale=>SCALE_DIV_SQRT_N)
 		port map(clk=>clk, din=>sub2din, phase=>sub2phase, dout=>sub2dout);
 
@@ -199,7 +199,7 @@ use work.twiddleGenerator;
 use work.transposer;
 use work.reorderBuffer;
 use work.twiddleGenerator16;
-use work.fft4_serial5_natural;
+use work.fft4_serial7;
 
 -- data input bit order: (3 downto 0) [1,0,3,2]
 -- data output bit order: (3 downto 0) [0,1,2,3]
@@ -262,10 +262,10 @@ begin
 	sub1phase <= phase(2-1 downto 0);
 	bitPermOut <= bitPermIn(0)&bitPermIn(1);
 	tw: entity twiddleGenerator16 port map(clk, twAddr, twData);
-	sub1inst: entity fft4_serial5_natural
+	sub1inst: entity fft4_serial7
 		generic map(dataBits=>dataBits, scale=>SCALE_DIV_N)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
-	sub2inst: entity fft4_serial5_natural
+	sub2inst: entity fft4_serial7
 		generic map(dataBits=>dataBits, scale=>SCALE_DIV_N)
 		port map(clk=>clk, din=>sub2din, phase=>sub2phase, dout=>sub2dout);
 
@@ -377,13 +377,13 @@ end ar;
 --FFTConfiguration(1024, 
 --	FFTConfiguration(64, 
 --		FFTConfiguration(16, 
---			FFTBase(4, 'fft4_serial5_natural', 'SCALE_NONE', 11),
---			FFTBase(4, 'fft4_serial5_natural', 'SCALE_NONE', 11),
+--			FFTBase(4, 'fft4_serial7', 'SCALE_NONE', 11),
+--			FFTBase(4, 'fft4_serial7', 'SCALE_NONE', 11),
 --		twiddleBits='twBits'),
---		FFTBase(4, 'fft4_serial5_natural', 'SCALE_DIV_SQRT_N', 11),
+--		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_SQRT_N', 11),
 --	twiddleBits='twBits'),
 --	FFTConfiguration(16, 
---		FFTBase(4, 'fft4_serial5_natural', 'SCALE_DIV_N', 11),
---		FFTBase(4, 'fft4_serial5_natural', 'SCALE_DIV_N', 11),
+--		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_N', 11),
+--		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_N', 11),
 --	twiddleBits='twBits'),
 --twiddleBits='twBits')

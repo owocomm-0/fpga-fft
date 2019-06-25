@@ -36,9 +36,9 @@ begin
 --   clk ||   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |
 --    ph ||   0   |   1   |   2   |   3   |   0   |   1   |   2   |   3   |   0   |   1   |   2   |   3   |   0   |   1   |
 --  srIn || 3210  | 0321  | 1032  | 2103  | 3210  | 0321  | 1032  | 2103  | 3210  | 0321  | 1032  | 2103  |
---  iReg ||       |       0       |   2   |   3   |       0       |
--- iReg2 ||                       |   0   |       |   3   |
--- iReg3 ||               |               1               |
+--  iReg ||       |   0   |   1   |   2   |   3   |   0   |   1   |
+-- iReg2 ||               |   0   |   1   |   2   |   3   |   0   |
+-- iReg3 ||               |   -   |   0   |       1       |
 --  bfIn ||                       | i2,i0 |       | i3,i1 |       | i2,i0 | t2,t0 | i3,i1 | t3,t1 |
 --bfOut0 ||                               | t1,t0 | o2,o0 | t3,t2 | o3,o1 | t1,t0 | o2,o0 | t3,t2 | o3,o1 |
 -- oReg0 ||                                       |  t0   |  o0   |  t2   |  o1   |  t0   |  o0   |  t2   |  o1   |
@@ -69,11 +69,11 @@ begin
 			oReg0 when ph=0 else
 			oReg4;
 
-	iReg <= din when (ph /= 1) and rising_edge(clk);
+	iReg <= din when rising_edge(clk);
 	iReg2 <= iReg when rising_edge(clk);
-	iReg3 <= din when (ph = 1) and rising_edge(clk);
+	iReg3 <= iReg2 when (ph=2 or ph=3) and rising_edge(clk);
 	
-	bfIn <= (iReg, iReg2) when ph=3 else
+	bfIn <= (iReg, iReg3) when ph=3 else
 			(to_complex(iReg2.re, iReg3.im), to_complex(iReg3.re, iReg2.im)) when ph=1 else
 			trOutA when ph=0 else
 			trOutB;

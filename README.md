@@ -52,20 +52,20 @@ To generate a custom FFT size, edit the FFT layout definitions in gen_fft.py.
 A layout definition looks like this:
 ```python
 fft4096 = \
-	FFTConfiguration(4096,
-		FFTConfiguration(64,
-			FFTConfiguration(16, 
+	FFT3Step(4096,
+		FFT3Step(64,
+			FFT3Step(16, 
 				FFTBase(4, 'fft4_serial3', 'SCALE_NONE'),
 				FFTBase(4, 'fft4_serial3', 'SCALE_NONE')),
 			FFTBase(4, 'fft4_serial3', 'SCALE_NONE')),
-		FFTConfiguration(64,
-			FFTConfiguration(16, 
+		FFT3Step(64,
+			FFT3Step(16, 
 				FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N'),
 				FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')),
 			FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N')),
 		16); # twiddleBits
 ```
-FFTBase represents a base FFT implementation (butterfly), and FFTConfiguration represents the combination of two sub-FFTs to form a larger FFT of size N1*N2.
+FFTBase represents a base FFT implementation (butterfly), and FFT3Step represents the combination of two sub-FFTs to form a larger FFT of size N1*N2.
 
 Scaling modes for fft4 are SCALE_NONE (do not scale), SCALE_DIV_N (divide by N), and SCALE_DIV_SQRT_N (divide by sqrt(n)). For best accuracy defer scaling until it is necessary (like shown above).
 

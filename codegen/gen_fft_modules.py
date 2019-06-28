@@ -137,7 +137,7 @@ signal {0:s}phase: unsigned({1:d}-1 downto 0);'''.format(id, myLog2(self.N))
 	def delay(self):
 		return self.delay1
 
-class FFTConfiguration:
+class FFT3Step:
 	def __init__(self, N, sub1, sub2, twiddleBits='twBits', rnd=True, largeMultiplier=False):
 		assert N == (sub1.N*sub2.N)
 		self.N = N

@@ -164,6 +164,9 @@ class FFT4Step:
 		else:
 			self.sub2Transposer = False
 	
+	def children(self):
+		return [self.sub1, self.sub2]
+
 	def setOptions(self, rnd, largeMultiplier):
 		self.rnd = rnd
 		self.largeMultiplier = largeMultiplier
@@ -279,7 +282,7 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 '''.format(id, sub1Order, sub2Order)
 		
 		return signals
-		
+	
 	def genBody(self, id, subId1, subId2):
 		bOrder1 = bitOrderToVHDL(self.sub1.outputBitOrder(), id + 'bitPermIn')
 		
@@ -444,24 +447,31 @@ class FFTSPDF:
 		self.sub1 = sub1
 		self.twiddleBits = twiddleBits
 		self.reorderAdditiveDelay = 0
+		self.spdf_delay = N/2 + 4 + N/4 + 4
 		self.setOptions(rnd, largeMultiplier)
+		self.imports = ['twiddleMultiplier', 'fft_spdf_stage']
 		
 		if N > 32:
 			self.simpleTwiddleRom = False
 			self.twiddleDelay = 7
-			self.imports = ['twiddleRom%d' % N]
+			self.imports.append('twiddleRom%d' % N)
+			self.imports.append('twiddleGenerator')
 		else:
 			self.simpleTwiddleRom = True
 			self.twiddleDelay = 2
-			self.imports = ['twiddleGenerator%d' % N]
+			self.imports.append('twiddleGenerator%d' % N)
 		
 		if not bitOrderIsNatural(sub1.inputBitOrder()):
 			self.sub1Transposer = True
 			self.reorderPerm = BitPermutation(sub1.inputBitOrder())
 			self.reorderDelay = sub1.N + self.reorderAdditiveDelay
+			self.imports.append('reorderBuffer')
 		else:
 			self.sub1Transposer = False
-	
+
+	def children(self):
+		return [self.sub1]
+
 	def setOptions(self, rnd, largeMultiplier):
 		self.rnd = rnd
 		self.largeMultiplier = largeMultiplier
@@ -473,7 +483,6 @@ class FFTSPDF:
 	def setOptionsRecursive(self, rnd, largeMultiplier):
 		self.setOptions(rnd, largeMultiplier)
 		self.sub1.setOptionsRecursive(rnd, largeMultiplier)
-		self.sub2.setOptionsRecursive(rnd, largeMultiplier)
 	
 	def configurationStr(self):
 		clsName = self.__class__.__name__
@@ -489,13 +498,13 @@ class FFTSPDF:
 		return res
 	
 	def delay(self):
-		d = self.sub1.delay() + self.N + self.multDelay
+		d = self.spdf_delay + self.sub1.delay() + self.multDelay
 		if self.sub1Transposer:
 			d += self.reorderDelay
 		return d
 	
 	def inputBitOrder(self):
-		return range(0, self.N)
+		return range(0, myLog2(self.N))
 
 	def outputBitOrder(self):
 		O1 = myLog2(self.sub1.N)
@@ -533,7 +542,7 @@ class FFTSPDF:
 		
 		return constants
 	
-	def genDeclarations(self, id, sub1, includePorts=True):
+	def genDeclarations(self, id, includePorts=True):
 		sub1Order = myLog2(self.sub1.N)
 		signals = ''
 		if includePorts:
@@ -543,10 +552,11 @@ signal {0:s}phase: unsigned({0:s}order-1 downto 0);
 '''
 
 		signals += '''
-signal {0:s}rbIn: complex;
-signal {0:s}bitPermIn,{0:s}bitPermOut: unsigned({1:d}-1 downto 0);
+signal {0:s}rbIn, {0:s}spdfOut: complex;
+signal {0:s}ph1, {0:s}ph2: unsigned({0:s}order-1 downto 0);
 
 -- twiddle generator
+signal {0:s}bitPermIn,{0:s}bitPermOut: unsigned(1 downto 0);
 signal {0:s}twAddr: unsigned({0:s}order-1 downto 0);
 signal {0:s}twData: complex;
 
@@ -564,52 +574,58 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 		return signals
 	
 	def genBody(self, id, subId1):
-		bOrder1 = bitOrderToVHDL(self.sub1.outputBitOrder(), id + 'bitPermIn')
-		
 		sub1order = myLog2(self.sub1.N)
 		sub1delay = self.sub1.delay()
 		
 		sub1in = self.sub1.sigIn(subId1)
 		sub1phase = self.sub1.sigPhase(subId1)
 		
+		order = myLog2(self.N)
+		
 		if self.sub1Transposer:
 			sub1in = id + 'rbIn'
 			sub1phase = id + 'rbInPhase'
 			sub1delay += self.reorderDelay
 		
-		#         0     1       2       3       4             5       6     
-		params = [id, subId1, subId2, sub2in, sub2delay, sub2phase, bOrder1,
+		#         0     1       2      3       4           5        6     
+		params = [id, subId1, order, sub1in, sub1delay, sub1phase, '',
 		#              7          8              9                    10
 					self.N, self.multDelay, boolStr(self.rnd), boolStr(self.largeMultiplier),
-		#              11         12         13         14
-					sub1order, sub2order, sub1delay, sub2delay
+		#              11         12           13                  14
+					sub1order, sub1delay, self.spdf_delay
 					]
 		body = '''
-{0:s}core: entity fft4step_bram_generic3
+spdfStage: entity fft_spdf_stage
+	generic map(N=>{2:d}, dataBits=>dataBits)
+	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}spdfOut);
+
+{0:s}ph1 <= {0:s}phase-{13:d}+1 when rising_edge(clk);
+
+twMult: entity twiddleMultiplier
 	generic map(
 		dataBits=>dataBits,
 		twiddleBits=>{0:s}twiddleBits,
-		subOrder1=>{11:d},
-		subOrder2=>{12:d},
+		subOrder1=>2,
+		subOrder2=>{11:d},
 		twiddleDelay=>{0:s}twiddleDelay,
 		multDelay=>{8:d},
-		subDelay1=>{13:d},
-		subDelay2=>{4:d},
-		round=>{9:s},
 		customSubOrder=>true,
+		round=>{9:s}, 
 		largeMultiplier=>{10:s})
 	port map(
-		clk=>clk, phase=>{0:s}phase, phaseOut=>open,
-		subOut1=>{1:s}dout,
-		subIn2=>{3:s},
-		subPhase2=>{5:s},
+		clk=>clk,
+		din=>{0:s}spdfOut,
+		phase=>{0:s}ph1,
+		dout=>{3:s},
 		twAddr=>{0:s}twAddr, twData=>{0:s}twData,
 		bitPermIn=>{0:s}bitPermIn, bitPermOut=>{0:s}bitPermOut);
-	
-{1:s}din <= {0:s}din;
-{0:s}dout <= {2:s}dout;
-{1:s}phase <= {0:s}phase({11:d}-1 downto 0);
-{0:s}bitPermOut <= {6:s};
+
+{0:s}ph2 <= {0:s}ph1-{8:d}+1 when rising_edge(clk);
+{5:s} <= {0:s}ph2({11:d}-1 downto 0);
+
+{0:s}dout <= {1:s}dout;
+
+{0:s}bitPermOut <= {0:s}bitPermIn(0) & {0:s}bitPermIn(1);
 '''
 		
 		if self.simpleTwiddleRom:
@@ -624,12 +640,12 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 '''
 		
 		body = body.format(*params)
-		if self.sub2Transposer:
-			params = [id, myLog2(self.sub2.N),
+		if self.sub1Transposer:
+			params = [id, myLog2(self.sub1.N),
 						self.reorderPerm.sigIn(id),
 						self.reorderPerm.sigCount(id),
 						self.reorderPerm.sigOut(id),
-						subId2,
+						subId1,
 						self.reorderAdditiveDelay,
 						self.reorderPerm.repLen]
 			body += self.reorderPerm.genBody(id)
@@ -639,9 +655,9 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 	generic map(N=>{1:d}, dataBits=>dataBits, repPeriod=>{7:d}, bitPermDelay=>0, dataPathDelay=>{6:d})
 	port map(clk, din=>{0:s}rbIn, phase=>{0:s}rbInPhase, dout=>{5:s}din,
 		bitPermIn=>{2:s}, bitPermCount=>{3:s}, bitPermOut=>{4:s});
-	
+
 {5:s}phase <= {0:s}rbInPhase-{6:d};
-	
+
 '''.format(*params)
 		return body
 	
@@ -653,7 +669,7 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 		line2 = '	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}dout);'.format(instanceName)
 		return line1 + '\n' + line2
 	
-	def genEntity(self, entityName, sub1Name, sub2Name):
+	def genEntity(self, entityName, sub1Name):
 		code = '''
 library ieee;
 library work;
@@ -662,13 +678,9 @@ use ieee.std_logic_1164.all;
 USE ieee.math_real.log2;
 USE ieee.math_real.ceil;
 use work.fft_types.all;
-use work.fft4step_bram_generic3;
-use work.twiddleGenerator;
-use work.transposer;
-use work.reorderBuffer;
 '''
 		imports = self.imports
-		imports.extend([sub1Name, sub2Name])
+		imports.extend([sub1Name])
 		importsSet = set()
 		for imp in imports:
 			if not imp in importsSet:
@@ -680,8 +692,7 @@ use work.reorderBuffer;
 				self.delay(),
 				entityName,
 				myLog2(self.N),
-				myLog2(self.sub1.N),
-				myLog2(self.sub2.N)]
+				myLog2(self.sub1.N)]
 		code += '''
 -- data input bit order: {0:s}
 -- data output bit order: {1:s}
@@ -697,21 +708,21 @@ entity {3:s} is
 		);
 end entity;
 architecture ar of {3:s} is
-	signal sub1din, sub1dout, sub2din, sub2dout: complex;
+	signal sub1din, sub1dout: complex;
 	signal sub1phase: unsigned({5:d}-1 downto 0);
-	signal sub2phase: unsigned({6:d}-1 downto 0);
 '''.format(*params)
 		
 		code += indent(self.genConstants(''), 1)
-		code += '\n\n\t--=======================================\n\n'
-		code += indent(self.genDeclarations('', 'sub1', 'sub2', False), 1)
+		code += '\n\t--=======================================\n\n'
+		code += indent(self.genDeclarations('', False), 1)
 		code += '''
 begin
 '''
-		code += indent(self.genBody('', 'sub1', 'sub2'), 1)
+		code += indent(self.genBody('', 'sub1'), 1)
+		code += '\n'
 		code += indent(self._genSubInst('sub1', sub1Name, self.sub1), 1)
-		code += indent(self._genSubInst('sub2', sub2Name, self.sub2), 1)
 		code += '''
 end ar;
 '''
+		return code
 

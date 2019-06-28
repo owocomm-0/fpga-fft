@@ -2,6 +2,7 @@
 # This file contains utility functions for the code generator.
 
 from math import *
+import sys
 
 def myLog2(N):
 	tmp = log(N)/log(2.)
@@ -50,6 +51,8 @@ def bitOrderConstraintLength(bitOrder):
 	for i in xrange(1000):
 		tmp = [tmp[x] for x in bitOrder]
 		if bitOrderIsNatural(tmp): return i+1
+
+	print >> sys.stderr, 'bad bit order: ' + str(bitOrder)
 	assert False
 
 def addIndent(s):
@@ -65,10 +68,13 @@ def commentOut(s):
 	return '\n'.join(ret)
 
 def indent(s, level):
+	s = s.strip()
 	sp = '\t' * level
 	ret = []
 	for line in s.split('\n'):
-		if len(line) == 0: continue
+		if len(line.strip()) == 0:
+			ret.append('')
+			continue
 		ret.append(sp + line)
 	ret.append('')
 	return '\n'.join(ret)

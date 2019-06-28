@@ -14,6 +14,8 @@ package fft_types is
 	-- ram inside a transposer or reorderBuffer is at least this value
 	constant TRANSPOSER_OREG_THRESHOLD: integer := 7;
 	
+	attribute relDelay: integer;
+	
 	type complex is record
 		re: signed(COMPLEXWIDTH-1 downto 0);
 		im: signed(COMPLEXWIDTH-1 downto 0);
@@ -53,6 +55,9 @@ package fft_types is
 	type scalingModes is (SCALE_DIV_N, SCALE_DIV_SQRT_N, SCALE_NONE);
 	
 	function scalingShift(scale: scalingModes; order: integer) return integer;
+	
+	function fft_spdf_halfstage_delay(N: integer; butterfly2: boolean) return integer;
+	function fft_spdf_stage_delay(N: integer) return integer;
 end package;
 
 package body fft_types is
@@ -252,7 +257,16 @@ package body fft_types is
 		end if;
 	end function;
 	
-
+	
+	function fft_spdf_halfstage_delay(N: integer; butterfly2: boolean) return integer is
+	begin
+		return iif(butterfly2, 2**(N-2), 2**(N-1)) + 2 + 2;
+	end function;
+	
+	function fft_spdf_stage_delay(N: integer) return integer is
+	begin
+		return fft_spdf_halfstage_delay(N, true) + fft_spdf_halfstage_delay(N, false);
+	end function;
 end package body;
 
 

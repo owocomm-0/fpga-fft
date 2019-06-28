@@ -46,6 +46,9 @@ fft16 = \
 fft16_scale_none = FFT4Step(16,  fft4_scale_none, fft4_scale_none);
 fft16_scale_div_n = FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n);
 
+fft16_2 = \
+	FFTSPDF(16, fft4_scale_div_n);
+
 # scales by 1/4. 32 is not a perfect square so 1/sqrt(n) is not possible
 fft32 = \
 	FFT4Step(32,
@@ -114,6 +117,17 @@ fft1024_2 = \
 				fft4_scale_div_n)),
 		fft4_scale_div_n);
 
+
+fft1024_spdf_wide = \
+	FFTSPDF(1024,
+		FFTSPDF(256,
+			FFT4Step(64,
+				FFT4Step(16, 
+					fft4_scale_div_sqrt_n,
+					fft4_scale_div_n),
+				fft4_scale_div_n)));
+
+fft1024_spdf_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
 
 
 

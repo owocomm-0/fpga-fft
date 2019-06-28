@@ -18,7 +18,7 @@ def genDeclarations(fft, id, level, fnName='genDeclarations'):
 		subId2 = 'B'
 	
 	if (fnName == 'genDeclarations' or fnName == 'genBody') \
-			and isinstance(fft, FFT4Step):
+			and not isinstance(fft, FFTBase):
 		params += [subId1 + '_', subId2 + '_']
 	
 	# call gen*
@@ -106,10 +106,12 @@ end ar;
 	return code
 
 def _collectInstances(instanceMap, instanceList, fft):
-	if not isinstance(fft, FFT4Step):
+	if isinstance(fft, FFTBase):
 		return
-	_collectInstances(instanceMap, instanceList, fft.sub1)
-	_collectInstances(instanceMap, instanceList, fft.sub2)
+
+	for ch in fft.children():
+		_collectInstances(instanceMap, instanceList, ch)
+
 	key = fft.descriptionStr()
 	if not key in instanceMap:
 		instanceMap[key] = fft
@@ -137,19 +139,14 @@ def genFFTSeparated(fft, entityName):
 	# generate all instances
 	code = []
 	for inst in instanceList:
-		sub1Name = ''
-		sub2Name = ''
-		if isinstance(inst.sub1, FFT4Step):
-			sub1Name = inst.sub1._name
-		else:
-			sub1Name = inst.sub1.entity
-		
-		if isinstance(inst.sub2, FFT4Step):
-			sub2Name = inst.sub2._name
-		else:
-			sub2Name = inst.sub2.entity
-		
-		code.append(inst.genEntity(inst._name, sub1Name, sub2Name))
+		names = []
+		for ch in inst.children():
+			if isinstance(ch, FFTBase):
+				names.append(ch.entity)
+			else:
+				names.append(ch._name)
+
+		code.append(inst.genEntity(inst._name, *names))
 	
 	return '\n\n'.join(code)
 

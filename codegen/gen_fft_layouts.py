@@ -11,9 +11,9 @@ fft2_scale_none = FFTBase(2, 'fft2_serial', 'SCALE_NONE', 6)
 fft2_scale_div_n = FFTBase(2, 'fft2_serial', 'SCALE_DIV_N', 6)
 
 
-#fft4_scale_none = FFT3Step(4, fft2_scale_none, fft2_scale_none);
-#fft4_scale_div_sqrt_n = FFT3Step(4, fft2_scale_none, fft2_scale_div_n);
-#fft4_scale_div_n = FFT3Step(4, fft2_scale_div_n, fft2_scale_div_n);
+#fft4_scale_none = FFT4Step(4, fft2_scale_none, fft2_scale_none);
+#fft4_scale_div_sqrt_n = FFT4Step(4, fft2_scale_none, fft2_scale_div_n);
+#fft4_scale_div_n = FFT4Step(4, fft2_scale_div_n, fft2_scale_div_n);
 
 
 fft4_delay = 10
@@ -39,77 +39,77 @@ fft4_scale_div_n.setOutputBitOrder([1,0])
 
 
 fft16 = \
-	FFT3Step(16, 
+	FFT4Step(16, 
 		fft4_scale_none,
 		fft4_scale_div_n);
 
-fft16_scale_none = FFT3Step(16,  fft4_scale_none, fft4_scale_none);
-fft16_scale_div_n = FFT3Step(16,  fft4_scale_div_n, fft4_scale_div_n);
+fft16_scale_none = FFT4Step(16,  fft4_scale_none, fft4_scale_none);
+fft16_scale_div_n = FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n);
 
 # scales by 1/4. 32 is not a perfect square so 1/sqrt(n) is not possible
 fft32 = \
-	FFT3Step(32,
-		FFT3Step(8, 
+	FFT4Step(32,
+		FFT4Step(8, 
 			fft4_scale_none,
 			fft2_scale_none),
 		fft4_scale_div_n);
 
 fft64 = \
-	FFT3Step(64,
-		FFT3Step(16, 
+	FFT4Step(64,
+		FFT4Step(16, 
 			fft4_scale_none,
 			fft4_large_scale_div_sqrt_n),
 		fft4_scale_div_n);
 
 
-fft64_scale_none = FFT3Step(64, fft16_scale_none, fft4_scale_none);
-fft64_scale_div_n = FFT3Step(64, fft16_scale_div_n, fft4_scale_div_n);
+fft64_scale_none = FFT4Step(64, fft16_scale_none, fft4_scale_none);
+fft64_scale_div_n = FFT4Step(64, fft16_scale_div_n, fft4_scale_div_n);
 
 
 
 
 fft256 = \
-	FFT3Step(256,
-		FFT3Step(16, 
+	FFT4Step(256,
+		FFT4Step(16, 
 			fft4_scale_none,
 			fft4_scale_none),
-		FFT3Step(16, 
+		FFT4Step(16, 
 			fft4_scale_div_n,
 			fft4_scale_div_n));
 fft256.setOptionsRecursive(True, True)
 
 
 fft1024 = \
-	FFT3Step(1024,
-		FFT3Step(64,
-			FFT3Step(16, 
+	FFT4Step(1024,
+		FFT4Step(64,
+			FFT4Step(16, 
 				fft4_scale_none,
 				fft4_scale_none),
 			fft4_large_scale_div_sqrt_n),
-		FFT3Step(16, 
+		FFT4Step(16, 
 			fft4_scale_div_n,
 			fft4_scale_div_n));
 
 fft1024_wide = \
-	FFT3Step(1024,
-		FFT3Step(64,
-			FFT3Step(16, 
+	FFT4Step(1024,
+		FFT4Step(64,
+			FFT4Step(16, 
 				fft4_scale_none,
 				fft4_scale_none),
 			fft4_scale_div_sqrt_n),
-		FFT3Step(16, 
+		FFT4Step(16, 
 			fft4_scale_div_n,
 			fft4_scale_div_n));
 
 fft1024_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
 
 fft1024_2 = \
-	FFT3Step(1024,
-		FFT3Step(256,
-			FFT3Step(16, 
+	FFT4Step(1024,
+		FFT4Step(256,
+			FFT4Step(16, 
 				fft4_scale_none,
 				fft4_scale_none),
-			FFT3Step(16, 
+			FFT4Step(16, 
 				fft4_large_scale_div_sqrt_n,
 				fft4_scale_div_n)),
 		fft4_scale_div_n);
@@ -118,75 +118,75 @@ fft1024_2 = \
 
 
 fft4096 = \
-	FFT3Step(4096,
-		FFT3Step(64,
-			FFT3Step(16,  fft4_scale_none, fft4_scale_none),
+	FFT4Step(4096,
+		FFT4Step(64,
+			FFT4Step(16,  fft4_scale_none, fft4_scale_none),
 			fft4_scale_none),
-		FFT3Step(64, 
-			FFT3Step(16,  fft4_scale_div_n, fft4_scale_div_n),
+		FFT4Step(64, 
+			FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n),
 			fft4_scale_div_n));
 
 fft8192 = \
-	FFT3Step(8192,
-		FFT3Step(128,
-			FFT3Step(16,  fft4_scale_none, fft4_scale_none),
-			FFT3Step(8,  fft4_scale_none, fft2_scale_div_n)),
-		FFT3Step(64, 
-			FFT3Step(16,  fft4_scale_div_n, fft4_scale_div_n),
+	FFT4Step(8192,
+		FFT4Step(128,
+			FFT4Step(16,  fft4_scale_none, fft4_scale_none),
+			FFT4Step(8,  fft4_scale_none, fft2_scale_div_n)),
+		FFT4Step(64, 
+			FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n),
 			fft4_scale_div_n));
 
 fft8192_wide = \
-	FFT3Step(8192,
-		FFT3Step(128,
-			FFT3Step(16,  fft4_scale_none, fft4_scale_none),
-			FFT3Step(8,  fft4_scale_none, fft2_scale_div_n)),
-		FFT3Step(64, 
-			FFT3Step(16,  fft4_scale_div_n, fft4_scale_div_n),
+	FFT4Step(8192,
+		FFT4Step(128,
+			FFT4Step(16,  fft4_scale_none, fft4_scale_none),
+			FFT4Step(8,  fft4_scale_none, fft2_scale_div_n)),
+		FFT4Step(64, 
+			FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n),
 			fft4_scale_div_n));
 fft8192_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
 
 
 fft16k = \
-	FFT3Step(16*1024,
-		FFT3Step(4096,
-			FFT3Step(64,
-				FFT3Step(16,
+	FFT4Step(16*1024,
+		FFT4Step(4096,
+			FFT4Step(64,
+				FFT4Step(16,
 					fft4_scale_none,
 					fft4_scale_none),
 				fft4_scale_none),
-			FFT3Step(64, 
-				FFT3Step(16,
+			FFT4Step(64, 
+				FFT4Step(16,
 					fft4_large_scale_div_sqrt_n,
 					fft4_scale_div_n),
 				fft4_scale_div_n)),
 		fft4_scale_div_n);
 
 fft16k_2 = \
-	FFT3Step(16*1024,
-		FFT3Step(128,
-			FFT3Step(16,  fft4_scale_none, fft4_scale_none),
-			FFT3Step(8,  fft4_scale_none, fft2_scale_none)),
-		FFT3Step(128,
-			FFT3Step(16,  fft4_scale_div_n, fft4_scale_div_n),
-			FFT3Step(8,  fft4_scale_div_n, fft2_scale_div_n)));
+	FFT4Step(16*1024,
+		FFT4Step(128,
+			FFT4Step(16,  fft4_scale_none, fft4_scale_none),
+			FFT4Step(8,  fft4_scale_none, fft2_scale_none)),
+		FFT4Step(128,
+			FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n),
+			FFT4Step(8,  fft4_scale_div_n, fft2_scale_div_n)));
 
 fft32k = \
-	FFT3Step(32*1024,
-		FFT3Step(256,
-			FFT3Step(16,  fft4_scale_none, fft4_scale_none),
-			FFT3Step(16,  fft4_scale_none, fft4_scale_div_sqrt_n)),
-		FFT3Step(128,
-			FFT3Step(16,  fft4_scale_div_n, fft4_scale_div_n),
-			FFT3Step(8,  fft4_scale_div_n, fft2_scale_div_n)));
+	FFT4Step(32*1024,
+		FFT4Step(256,
+			FFT4Step(16,  fft4_scale_none, fft4_scale_none),
+			FFT4Step(16,  fft4_scale_none, fft4_scale_div_sqrt_n)),
+		FFT4Step(128,
+			FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n),
+			FFT4Step(8,  fft4_scale_div_n, fft2_scale_div_n)));
 
 fft32k_wide = \
-	FFT3Step(32*1024,
-		FFT3Step(256,
-			FFT3Step(16,  fft4_scale_none, fft4_scale_none),
-			FFT3Step(16,  fft4_scale_none, fft4_scale_div_sqrt_n)),
-		FFT3Step(128,
-			FFT3Step(16,  fft4_scale_div_n, fft4_scale_div_n),
-			FFT3Step(8,  fft4_scale_div_n, fft2_scale_div_n)));
+	FFT4Step(32*1024,
+		FFT4Step(256,
+			FFT4Step(16,  fft4_scale_none, fft4_scale_none),
+			FFT4Step(16,  fft4_scale_none, fft4_scale_div_sqrt_n)),
+		FFT4Step(128,
+			FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n),
+			FFT4Step(8,  fft4_scale_div_n, fft2_scale_div_n)));
 
 fft32k_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
 

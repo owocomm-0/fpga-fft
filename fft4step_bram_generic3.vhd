@@ -29,7 +29,7 @@ use work.transposer;
 -- (e.g. 0,4,8,12,2,6,10,14,...). sub-fft 2 must still accept data in linear order,
 -- but may output data in permuted order, in which case the rows of the output
 -- are permuted.
-entity fft3step_bram_generic3 is
+entity fft4step_bram_generic3 is
 	generic(dataBits: integer := 18;
 			twiddleBits: integer := 12;
 			subOrder1,subOrder2: integer := 4;
@@ -57,7 +57,7 @@ entity fft3step_bram_generic3 is
 		);
 end entity;
 
-architecture ar of fft3step_bram_generic3 is
+architecture ar of fft4step_bram_generic3 is
 	constant order: integer := subOrder1+subOrder2;
 	constant N: integer := 2**order;
 	constant subN1: integer := 2**subOrder1;

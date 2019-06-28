@@ -18,7 +18,7 @@ def genDeclarations(fft, id, level, fnName='genDeclarations'):
 		subId2 = 'B'
 	
 	if (fnName == 'genDeclarations' or fnName == 'genBody') \
-			and isinstance(fft, FFT3Step):
+			and isinstance(fft, FFT4Step):
 		params += [subId1 + '_', subId2 + '_']
 	
 	# call gen*
@@ -56,7 +56,7 @@ use ieee.std_logic_1164.all;
 USE ieee.math_real.log2;
 USE ieee.math_real.ceil;
 use work.fft_types.all;
-use work.fft3step_bram_generic3;
+use work.fft4step_bram_generic3;
 use work.twiddleGenerator;
 use work.transposer;
 use work.reorderBuffer;
@@ -106,7 +106,7 @@ end ar;
 	return code
 
 def _collectInstances(instanceMap, instanceList, fft):
-	if not isinstance(fft, FFT3Step):
+	if not isinstance(fft, FFT4Step):
 		return
 	_collectInstances(instanceMap, instanceList, fft.sub1)
 	_collectInstances(instanceMap, instanceList, fft.sub2)
@@ -139,12 +139,12 @@ def genFFTSeparated(fft, entityName):
 	for inst in instanceList:
 		sub1Name = ''
 		sub2Name = ''
-		if isinstance(inst.sub1, FFT3Step):
+		if isinstance(inst.sub1, FFT4Step):
 			sub1Name = inst.sub1._name
 		else:
 			sub1Name = inst.sub1.entity
 		
-		if isinstance(inst.sub2, FFT3Step):
+		if isinstance(inst.sub2, FFT4Step):
 			sub2Name = inst.sub2._name
 		else:
 			sub2Name = inst.sub2.entity

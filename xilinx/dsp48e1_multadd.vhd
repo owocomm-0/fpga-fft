@@ -192,7 +192,7 @@ use work.fft_types.all;
 use work.dsp48e1_complexMultiply35x25;
 
 -- max width is 25 (in1) and 35 (in2)
--- delay is 8 cycles
+-- delay is 9 cycles
 entity dsp48e1_complexMultiply is
 	generic(in1Bits, in2Bits, outBits: integer := 8;
 			round: boolean := true);

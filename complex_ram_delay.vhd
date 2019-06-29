@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 use work.fft_types.all;
 use work.complexRam;
+use work.complexRamLUT;
 use work.sr_complex;
 
 entity complexRamDelay is
@@ -14,7 +15,7 @@ entity complexRamDelay is
 end entity;
 architecture a of complexRamDelay is
 	-- we can not use ram if delay is too small, so sr_complex is used
-	constant useSR: boolean := (delay <= 4);
+	constant useSR: boolean := (delay <= 32);
 	
 	-- how many cycles from raddr to rdata
 	constant ramReadDelay: integer := 2;
@@ -29,6 +30,8 @@ architecture a of complexRamDelay is
 	constant depthOrder: integer := ceilLog2(fuck);
 	constant depth: integer := 2**depthOrder;
 	
+	constant useLUTRam: boolean := (depthOrder < TRANSPOSER_BRAM_THRESHOLD);
+	
 	signal raddr, waddr: unsigned(depthOrder-1 downto 0);
 	signal counter: unsigned(depthOrder-1 downto 0) := (others=>'0');
 	signal rdata, wdata: complex;
@@ -40,11 +43,20 @@ g1: if useSR generate
 	end generate;
 
 g2: if not useSR generate
-		ram: entity complexRam
-			generic map(dataBits=>dataBits, depthOrder=>depthOrder)
-			port map(rdclk=>clk, wrclk=>clk,
-					rdaddr=>raddr, rddata=>rdata,
-					wren=>'1', wraddr=>waddr, wrdata=>wdata);
+	g3: if useLUTRam generate
+			ram: entity complexRamLUT
+				generic map(dataBits=>dataBits, depthOrder=>depthOrder)
+				port map(rdclk=>clk, wrclk=>clk,
+						rdaddr=>raddr, rddata=>rdata,
+						wren=>'1', wraddr=>waddr, wrdata=>wdata);
+		end generate;
+	g4: if not useLUTRam generate
+			ram: entity complexRam
+				generic map(dataBits=>dataBits, depthOrder=>depthOrder)
+				port map(rdclk=>clk, wrclk=>clk,
+						rdaddr=>raddr, rddata=>rdata,
+						wren=>'1', wraddr=>waddr, wrdata=>wdata);
+		end generate;
 		
 		counter <= counter+1 when rising_edge(clk);
 		raddr <= counter when rising_edge(clk);

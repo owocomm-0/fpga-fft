@@ -260,7 +260,7 @@ package body fft_types is
 	
 	function fft_spdf_halfstage_delay(N: integer; butterfly2: boolean) return integer is
 	begin
-		return iif(butterfly2, 2**(N-2), 2**(N-1)) + 2 + 2;
+		return iif(butterfly2, 2**(N-2), 2**(N-1)) + 2 + 1;
 	end function;
 	
 	function fft_spdf_stage_delay(N: integer) return integer is

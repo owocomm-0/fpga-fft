@@ -7,8 +7,8 @@ use work.sr_complex;
 use work.complexRamDelay;
 use work.spdf_butterflyA;
 
--- total delay: (2**N)/2 + bf_delay + 2 if butterfly2=0
---              (2**N)/4 + bf_delay + 2 if butterfly2=1
+-- total delay: (2**N)/2 + bf_delay + 1 if butterfly2=0
+--              (2**N)/4 + bf_delay + 1 if butterfly2=1
 -- N should be set to the log2 of the whole frame length. 
 -- delay line length is automatically set to frameSize/4 when butterfly2 is true.
 
@@ -37,8 +37,8 @@ architecture a of fft_spdf_halfstage is
 	signal delayOut: complex;
 	signal bfIn, bfOut, bfOutA, bfOutB: complexArray(1 downto 0);
 begin
-	din1 <= din when rising_edge(clk);
-	ph <= phase when rising_edge(clk);
+	din1 <= din; -- when rising_edge(clk);
+	ph <= phase; -- when rising_edge(clk);
 	
 	-- input delay
 	del1: entity sr_complex generic map(len=>bfDelay)

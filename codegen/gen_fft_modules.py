@@ -7,6 +7,27 @@
 from math import *
 from gen_fft_utils import *
 
+def recursiveCall(obj, fn, *args, **kwargs):
+	func = None
+	try:
+		func = getattr(obj, 'children')
+	except AttributeError:
+		func = None
+
+	if func != None:
+		children = func()
+		for ch in children:
+			recursiveCall(ch, fn, *args, **kwargs)
+
+	try:
+		func = getattr(obj, fn)
+	except AttributeError:
+		func = None
+
+	if func != None:
+		func(*args, **kwargs)
+
+
 class BitPermutation:
 	def __init__(self, bitOrder):
 		self.bitOrder = bitOrder
@@ -56,10 +77,36 @@ class BitPermutation:
 	def delay(self):
 		return 0
 
+class Multiplier:
+	def __init__(self, entity, delay):
+		self.isStub = True
+		self.entity = entity
+		self.delay1 = delay
+		self.imports = [entity]
+
+	def configurationStr(self):
+		clsName = self.__class__.__name__
+		res = "%s('%s', %d)" % (clsName, self.entity, self.delay1)
+		return res
+
+	def descriptionStr(self):
+		return "'%s', delay=%d" % (self.entity, self.delay1)
+
+	def getImports(self):
+		return self.imports
+
+	def delay(self):
+		return self.delay1
+
+defaultMult = Multiplier('complexMultiply2', 6)
+largeMult = Multiplier('dsp48e1_complexMultiply', 9)
+
+
 class FFTBase:
 	def __init__(self, N, entity, scale, delay1):
 		self.N = N
 		self.isBase = True
+		self.isStub = True
 		self.entity = entity
 		self.scale = scale
 		self.delay1 = delay1
@@ -67,7 +114,7 @@ class FFTBase:
 		self.imports = [entity]
 		self.iBitOrder = range(myLog2(self.N))
 		self.oBitOrder = range(myLog2(self.N))
-	
+
 	def setInputBitOrder(self, bitOrder):
 		assert len(bitOrder) == myLog2(self.N)
 		self.iBitOrder = bitOrder
@@ -75,12 +122,6 @@ class FFTBase:
 	def setOutputBitOrder(self, bitOrder):
 		assert len(bitOrder) == myLog2(self.N)
 		self.oBitOrder = bitOrder
-	
-	def setOptions(self, rnd, largeMultiplier):
-		pass
-	
-	def setOptionsRecursive(self, rnd, largeMultiplier):
-		pass
 
 	def configurationStr(self):
 		clsName = self.__class__.__name__
@@ -138,59 +179,56 @@ signal {0:s}phase: unsigned({1:d}-1 downto 0);'''.format(id, myLog2(self.N))
 		return self.delay1
 
 class FFT4Step:
-	def __init__(self, N, sub1, sub2, twiddleBits='twBits', rnd=True, largeMultiplier=False):
+	def __init__(self, N, sub1, sub2, multiplier=defaultMult, twiddleBits='twBits'):
 		assert N == (sub1.N*sub2.N)
 		self.N = N
 		self.isBase = False
+		self.isStub = False
 		self.sub1 = sub1
 		self.sub2 = sub2
 		self.twiddleBits = twiddleBits
 		self.reorderAdditiveDelay = 0
-		self.setOptions(rnd, largeMultiplier)
+		self.multiplier = multiplier
+		self.multDelay = multiplier.delay()
+		self.imports = ['twiddleAddrGen', 'transposer']
 		
 		if N > 32:
 			self.simpleTwiddleRom = False
 			self.twiddleDelay = 7
-			self.imports = ['twiddleRom%d' % N]
+			self.imports.extend(['twiddleGenerator', 'twiddleRom%d' % N])
 		else:
 			self.simpleTwiddleRom = True
 			self.twiddleDelay = 2
-			self.imports = ['twiddleGenerator%d' % N]
+			self.imports.append('twiddleGenerator%d' % N)
 		
 		if not bitOrderIsNatural(sub2.inputBitOrder()):
 			self.sub2Transposer = True
 			self.reorderPerm = BitPermutation(sub2.inputBitOrder())
 			self.reorderDelay = sub2.N + self.reorderAdditiveDelay
+			self.imports.append('reorderBuffer')
 		else:
 			self.sub2Transposer = False
-	
+
+	def setMultiplier(self, multiplier, recursive=True):
+		self.multiplier = multiplier
+		self.multDelay = multiplier.delay()
+		if recursive:
+			if not self.sub1.isBase: self.sub1.setMultiplier(multiplier, True)
+			if not self.sub2.isBase: self.sub2.setMultiplier(multiplier, True)
+
+	def isStub(self):
+		return False
+
 	def children(self):
 		return [self.sub1, self.sub2]
 
-	def setOptions(self, rnd, largeMultiplier):
-		self.rnd = rnd
-		self.largeMultiplier = largeMultiplier
-		self.multDelay = 6
-		
-		if largeMultiplier:
-			self.multDelay = 9
-			#if rnd:
-			#	self.multDelay = 9
-			#else:
-			#	self.multDelay = 8
-	
-	def setOptionsRecursive(self, rnd, largeMultiplier):
-		self.setOptions(rnd, largeMultiplier)
-		self.sub1.setOptionsRecursive(rnd, largeMultiplier)
-		self.sub2.setOptionsRecursive(rnd, largeMultiplier)
-	
 	def configurationStr(self):
 		clsName = self.__class__.__name__
 		
 		res = '%s(%d, \n' % (clsName, self.N)
 		res += addIndent(self.sub1.configurationStr()) + ',\n'
 		res += addIndent(self.sub2.configurationStr()) + ',\n'
-		res += 'twiddleBits=%s)' % serializeSymbol(self.twiddleBits)
+		res += '\ttwiddleBits=%s)' % serializeSymbol(self.twiddleBits)
 		return res
 	
 	def descriptionStr(self):
@@ -229,12 +267,14 @@ class FFT4Step:
 	def sigPhase(self, id):
 		return id + 'phase'
 	
-	def getImports(self):
+	def getImports(self, recursive=True):
 		ret = self.imports
-		ret.extend(self.sub1.getImports())
-		ret.extend(self.sub2.getImports())
+		ret.append(self.multiplier.entity)
+		if recursive:
+			ret.extend(self.sub1.getImports())
+			ret.extend(self.sub2.getImports())
 		return ret
-	
+
 	def genConstants(self, id):
 		constantsArr = ['N', self.N,
 					'twiddleBits', self.twiddleBits,
@@ -263,7 +303,8 @@ signal {0:s}phase: unsigned({0:s}order-1 downto 0);
 '''
 
 		signals += '''
-signal {0:s}rbIn: complex;
+signal {0:s}ph1, {0:s}ph2, {0:s}ph3: unsigned({0:s}order-1 downto 0);
+signal {0:s}rbIn, {0:s}transpOut: complex;
 signal {0:s}bitPermIn,{0:s}bitPermOut: unsigned({1:d}-1 downto 0);
 
 -- twiddle generator
@@ -301,36 +342,45 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 		
 		#         0     1       2       3       4             5       6     
 		params = [id, subId1, subId2, sub2in, sub2delay, sub2phase, bOrder1,
-		#              7          8              9                    10
-					self.N, self.multDelay, boolStr(self.rnd), boolStr(self.largeMultiplier),
-		#              11         12         13         14
-					sub1order, sub2order, sub1delay, sub2delay
+		#              7          8         9   10
+					self.N, self.multDelay, '', '',
+		#              11         12         13         14              15
+					sub1order, sub2order, sub1delay, sub2delay, self.multiplier.entity
 					]
 		body = '''
-{0:s}core: entity fft4step_bram_generic3
+{1:s}din <= {0:s}din;
+{1:s}phase <= {0:s}phase({11:d}-1 downto 0);
+
+{0:s}ph1 <= {0:s}phase-{13:d}+1 when rising_edge(clk);
+
+{0:s}transp: entity transposer
+	generic map(N1=>{12:d}, N2=>{11:d}, dataBits=>dataBits)
+	port map(clk=>clk, din=>{1:s}dout, phase=>{0:s}ph1, dout=>{0:s}transpOut);
+
+{0:s}ph2 <= {0:s}ph1;
+
+{0:s}twAG: entity twiddleAddrGen
 	generic map(
-		dataBits=>dataBits,
-		twiddleBits=>{0:s}twiddleBits,
 		subOrder1=>{11:d},
 		subOrder2=>{12:d},
 		twiddleDelay=>{0:s}twiddleDelay,
-		multDelay=>{8:d},
-		subDelay1=>{13:d},
-		subDelay2=>{4:d},
-		round=>{9:s},
-		customSubOrder=>true,
-		largeMultiplier=>{10:s})
+		customSubOrder=>true)
 	port map(
-		clk=>clk, phase=>{0:s}phase, phaseOut=>open,
-		subOut1=>{1:s}dout,
-		subIn2=>{3:s},
-		subPhase2=>{5:s},
-		twAddr=>{0:s}twAddr, twData=>{0:s}twData,
-		bitPermIn=>{0:s}bitPermIn, bitPermOut=>{0:s}bitPermOut);
-	
-{1:s}din <= {0:s}din;
+		clk=>clk,
+		phase=>{0:s}ph2,
+		twAddr=>{0:s}twAddr,
+		bitPermIn=>{0:s}bitPermIn,
+		bitPermOut=>{0:s}bitPermOut);
+
+{0:s}twMult: entity {15:s}
+	generic map(in1Bits=>{0:s}twiddleBits+1,
+				in2Bits=>dataBits,
+				outBits=>dataBits)
+	port map(clk=>clk, in1=>{0:s}twData, in2=>{0:s}transpOut, out1=>{3:s});
+
+{0:s}ph3 <= {0:s}ph2-{8:d}+1 when rising_edge(clk);
+{5:s} <= {0:s}ph3({12:d}-1 downto 0);
 {0:s}dout <= {2:s}dout;
-{1:s}phase <= {0:s}phase({11:d}-1 downto 0);
 {0:s}bitPermOut <= {6:s};
 '''
 		
@@ -384,12 +434,8 @@ use ieee.std_logic_1164.all;
 USE ieee.math_real.log2;
 USE ieee.math_real.ceil;
 use work.fft_types.all;
-use work.fft4step_bram_generic3;
-use work.twiddleGenerator;
-use work.transposer;
-use work.reorderBuffer;
 '''
-		imports = self.imports
+		imports = self.getImports(False)
 		imports.extend([sub1Name, sub2Name])
 		importsSet = set()
 		for imp in imports:
@@ -440,16 +486,18 @@ end ar;
 
 
 class FFTSPDF:
-	def __init__(self, N, sub1, twiddleBits='twBits', rnd=True, largeMultiplier=False):
+	def __init__(self, N, sub1, multiplier=defaultMult, twiddleBits='twBits'):
 		assert N == (sub1.N*4)
 		self.N = N
 		self.isBase = False
+		self.isStub = False
 		self.sub1 = sub1
+		self.multiplier = multiplier
+		self.multDelay = multiplier.delay()
 		self.twiddleBits = twiddleBits
 		self.reorderAdditiveDelay = 0
-		self.spdf_delay = N/2 + 4 + N/4 + 4
-		self.setOptions(rnd, largeMultiplier)
-		self.imports = ['twiddleMultiplier', 'fft_spdf_stage']
+		self.spdf_delay = N/2 + 3 + N/4 + 3
+		self.imports = ['twiddleAddrGen', 'fft_spdf_stage']
 		
 		if N > 32:
 			self.simpleTwiddleRom = False
@@ -469,31 +517,27 @@ class FFTSPDF:
 		else:
 			self.sub1Transposer = False
 
+	def setMultiplier(self, multiplier, recursive=True):
+		self.multiplier = multiplier
+		self.multDelay = multiplier.delay()
+		if recursive:
+			if not self.sub1.isBase: self.sub1.setMultiplier(multiplier, True)
+
 	def children(self):
 		return [self.sub1]
-
-	def setOptions(self, rnd, largeMultiplier):
-		self.rnd = rnd
-		self.largeMultiplier = largeMultiplier
-		self.multDelay = 6
-		
-		if largeMultiplier:
-			self.multDelay = 9
-	
-	def setOptionsRecursive(self, rnd, largeMultiplier):
-		self.setOptions(rnd, largeMultiplier)
-		self.sub1.setOptionsRecursive(rnd, largeMultiplier)
 	
 	def configurationStr(self):
 		clsName = self.__class__.__name__
 		
 		res = '%s(%d, \n' % (clsName, self.N)
 		res += addIndent(self.sub1.configurationStr()) + ',\n'
-		res += 'twiddleBits=%s)' % serializeSymbol(self.twiddleBits)
+		res += '\tmultiplier=' + self.multiplier.configurationStr() + ',\n'
+		res += '\ttwiddleBits=%s)' % serializeSymbol(self.twiddleBits)
 		return res
 	
 	def descriptionStr(self):
 		res = '%d: twiddleBits=%s, delay=%d\n' % (self.N, str(self.twiddleBits), self.delay())
+		res += '\t4: (spdf stage), delay=%d\n' % (self.spdf_delay,)
 		res += addIndent(self.sub1.descriptionStr())
 		return res
 	
@@ -520,9 +564,11 @@ class FFTSPDF:
 	def sigPhase(self, id):
 		return id + 'phase'
 	
-	def getImports(self):
+	def getImports(self, recursive=True):
 		ret = self.imports
-		ret.extend(self.sub1.getImports())
+		ret.append(self.multiplier.entity)
+		if recursive:
+			ret.extend(self.sub1.getImports())
 		return ret
 	
 	def genConstants(self, id):
@@ -589,36 +635,36 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 		
 		#         0     1       2      3       4           5        6     
 		params = [id, subId1, order, sub1in, sub1delay, sub1phase, '',
-		#              7          8              9                    10
-					self.N, self.multDelay, boolStr(self.rnd), boolStr(self.largeMultiplier),
+		#              7          8          9  10
+					self.N, self.multDelay, '', '',
 		#              11         12           13                  14
-					sub1order, sub1delay, self.spdf_delay
+					sub1order, sub1delay, self.spdf_delay, self.multiplier.entity
 					]
 		body = '''
-spdfStage: entity fft_spdf_stage
+{0:s}spdfStage: entity fft_spdf_stage
 	generic map(N=>{2:d}, dataBits=>dataBits)
 	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}spdfOut);
 
 {0:s}ph1 <= {0:s}phase-{13:d}+1 when rising_edge(clk);
 
-twMult: entity twiddleMultiplier
+{0:s}twAG: entity twiddleAddrGen
 	generic map(
-		dataBits=>dataBits,
-		twiddleBits=>{0:s}twiddleBits,
 		subOrder1=>2,
 		subOrder2=>{11:d},
 		twiddleDelay=>{0:s}twiddleDelay,
-		multDelay=>{8:d},
-		customSubOrder=>true,
-		round=>{9:s}, 
-		largeMultiplier=>{10:s})
+		customSubOrder=>true)
 	port map(
 		clk=>clk,
-		din=>{0:s}spdfOut,
 		phase=>{0:s}ph1,
-		dout=>{3:s},
-		twAddr=>{0:s}twAddr, twData=>{0:s}twData,
-		bitPermIn=>{0:s}bitPermIn, bitPermOut=>{0:s}bitPermOut);
+		twAddr=>{0:s}twAddr,
+		bitPermIn=>{0:s}bitPermIn,
+		bitPermOut=>{0:s}bitPermOut);
+
+{0:s}twMult: entity {14:s}
+	generic map(in1Bits=>{0:s}twiddleBits+1,
+				in2Bits=>dataBits,
+				outBits=>dataBits)
+	port map(clk=>clk, in1=>{0:s}twData, in2=>{0:s}spdfOut, out1=>{3:s});
 
 {0:s}ph2 <= {0:s}ph1-{8:d}+1 when rising_edge(clk);
 {5:s} <= {0:s}ph2({11:d}-1 downto 0);
@@ -662,7 +708,7 @@ twMult: entity twiddleMultiplier
 		return body
 	
 	def _genSubInst(self, instanceName, entityName, obj):
-		if isinstance(obj, FFTBase):
+		if obj.isStub:
 			return obj.genBody(instanceName)
 		
 		line1 = '{0:s}: entity {1:s} generic map(dataBits=>dataBits, twBits=>twBits)'.format(instanceName, entityName)
@@ -679,8 +725,8 @@ USE ieee.math_real.log2;
 USE ieee.math_real.ceil;
 use work.fft_types.all;
 '''
-		imports = self.imports
-		imports.extend([sub1Name])
+		imports = self.getImports(False)
+		imports.append(sub1Name)
 		importsSet = set()
 		for imp in imports:
 			if not imp in importsSet:

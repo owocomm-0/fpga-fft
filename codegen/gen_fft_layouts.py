@@ -79,7 +79,7 @@ fft256 = \
 		FFT4Step(16, 
 			fft4_scale_div_n,
 			fft4_scale_div_n));
-fft256.setOptionsRecursive(True, True)
+fft256.setMultiplier(largeMult)
 
 
 fft1024 = \
@@ -104,7 +104,7 @@ fft1024_wide = \
 			fft4_scale_div_n,
 			fft4_scale_div_n));
 
-fft1024_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
+fft1024_wide.setMultiplier(largeMult)
 
 fft1024_2 = \
 	FFT4Step(1024,
@@ -127,8 +127,7 @@ fft1024_spdf_wide = \
 					fft4_scale_div_n),
 				fft4_scale_div_n)));
 
-fft1024_spdf_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
-
+fft1024_spdf_wide.setMultiplier(largeMult)
 
 
 fft4096 = \
@@ -157,7 +156,7 @@ fft8192_wide = \
 		FFT4Step(64, 
 			FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n),
 			fft4_scale_div_n));
-fft8192_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
+fft8192_wide.setMultiplier(largeMult)
 
 
 fft16k = \
@@ -202,6 +201,6 @@ fft32k_wide = \
 			FFT4Step(16,  fft4_scale_div_n, fft4_scale_div_n),
 			FFT4Step(8,  fft4_scale_div_n, fft2_scale_div_n)));
 
-fft32k_wide.setOptionsRecursive(rnd=True, largeMultiplier=True)
+fft32k_wide.setMultiplier(largeMult)
 
 

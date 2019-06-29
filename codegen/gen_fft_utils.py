@@ -11,10 +11,11 @@ def myLog2(N):
 	return tmp
 
 def boolStr(b):
-	if b:
-		return 'true'
-	else:
-		return 'false'
+	if type(b) is str:
+		return b
+
+	if b: return 'true'
+	else: return 'false'
 
 def serializeSymbol(val):
 	if type(val) is int:

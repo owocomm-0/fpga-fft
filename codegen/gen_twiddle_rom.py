@@ -13,9 +13,18 @@ size = N/8;
 romDepthOrder = int(ceil(log(size)/log(2.)));
 romWidth = width - 1;
 scale = (2**romWidth);
+useLUTRAM = (romDepthOrder <= 5)
 
 fmt = '{0:0' + str(romWidth) + 'b}'
 name = 'twiddleRom'+str(N)
+
+extraCode = ''
+if useLUTRAM:
+	extraCode = '''
+	attribute rom_style: string;
+	attribute rom_style of rom: signal is "distributed";
+	attribute rom_style of addr1: signal is "distributed";
+'''
 
 print '''
 library ieee;
@@ -40,12 +49,13 @@ architecture a of {2:s} is
 	signal rom: ram1t;
 	signal addr1: unsigned(romDepthOrder-1 downto 0);
 	signal data0,data1: std_logic_vector(romWidth-1 downto 0);
+{3:s}
 begin
 	addr1 <= romAddr when rising_edge(clk);
 	data0 <= rom(to_integer(addr1));
 	data1 <= data0 when rising_edge(clk);
 	romData <= data1;
-	rom <= ('''.format(romDepthOrder, romWidth*2, name)
+	rom <= ('''.format(romDepthOrder, romWidth*2, name, extraCode)
 
 for i in xrange(size):
 	x = float(i+1)/N * (2*pi)

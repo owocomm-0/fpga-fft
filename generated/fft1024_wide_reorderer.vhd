@@ -25,6 +25,7 @@ architecture ar of fft1024_wide_ireorderer1 is
 	signal rP2: unsigned(10-1 downto 0);
 	signal rCnt: unsigned(2-1 downto 0);
 
+
 begin
 	rb: entity reorderBuffer
 		generic map(N=>10, dataBits=>dataBits, repPeriod=>4, bitPermDelay=>0, dataPathDelay=>0)
@@ -60,6 +61,7 @@ architecture ar of fft1024_wide_oreorderer1 is
 	signal rP0: unsigned(10-1 downto 0);
 	signal rP1: unsigned(10-1 downto 0);
 	signal rCnt: unsigned(1-1 downto 0);
+
 
 begin
 	rb: entity reorderBuffer
@@ -99,6 +101,7 @@ architecture ar of fft1024_wide_ireorderer2 is
 	signal rP4: unsigned(11-1 downto 0);
 	signal rCnt: unsigned(4-1 downto 0);
 
+
 begin
 	rb: entity reorderBuffer
 		generic map(N=>11, dataBits=>dataBits, repPeriod=>14, bitPermDelay=>0, dataPathDelay=>0)
@@ -137,6 +140,7 @@ architecture ar of fft1024_wide_oreorderer2 is
 	signal rP1: unsigned(11-1 downto 0);
 	signal rCnt: unsigned(1-1 downto 0);
 
+
 begin
 	rb: entity reorderBuffer
 		generic map(N=>11, dataBits=>dataBits, repPeriod=>2, bitPermDelay=>0, dataPathDelay=>0)
@@ -172,6 +176,7 @@ architecture ar of fft1024_wide_ireorderer4 is
 	signal rP1: unsigned(12-1 downto 0);
 	signal rP2: unsigned(12-1 downto 0);
 	signal rCnt: unsigned(2-1 downto 0);
+
 
 begin
 	rb: entity reorderBuffer
@@ -209,6 +214,7 @@ architecture ar of fft1024_wide_oreorderer4 is
 	signal rP1: unsigned(12-1 downto 0);
 	signal rP2: unsigned(12-1 downto 0);
 	signal rCnt: unsigned(2-1 downto 0);
+
 
 begin
 	rb: entity reorderBuffer

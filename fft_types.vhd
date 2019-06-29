@@ -14,6 +14,10 @@ package fft_types is
 	-- ram inside a transposer or reorderBuffer is at least this value
 	constant TRANSPOSER_OREG_THRESHOLD: integer := 7;
 	
+	-- use BRAM instead of LUTRAM when the address width of the
+	-- ram inside a transposer or reorderBuffer is at least this value
+	constant TRANSPOSER_BRAM_THRESHOLD: integer := 7;
+	
 	attribute relDelay: integer;
 	
 	type complex is record

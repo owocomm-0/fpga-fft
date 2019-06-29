@@ -31,7 +31,7 @@ architecture ar of transposer is
 	signal din2,dout0: complex;
 	signal iaddr, iaddr2, oaddr: unsigned(N1+N2-1 downto 0);
 	constant extraRegister: boolean := (N1+N2) >= TRANSPOSER_OREG_THRESHOLD;
-	constant useLUTRam: boolean := ((N1+N2) <= 5);
+	constant useLUTRam: boolean := ((N1+N2) < TRANSPOSER_BRAM_THRESHOLD);
 	constant myDelays: integer := iif(extraRegister, 3, 2);
 begin
 	-- read side

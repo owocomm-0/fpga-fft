@@ -45,7 +45,7 @@ architecture ar of reorderBuffer is
 	constant extraRegister: boolean := (N) >= TRANSPOSER_OREG_THRESHOLD;
 	constant addrDelays: integer := 3+bitPermDelay;
 	constant totalDelays: integer := iif(extraRegister, 3, 2) + addrDelays;
-	constant useLUTRam: boolean := (N <= 5);
+	constant useLUTRam: boolean := (N < TRANSPOSER_BRAM_THRESHOLD);
 	
 	constant stateCount: integer := repPeriod;
 	constant stateBits: integer := ceilLog2(stateCount);

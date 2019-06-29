@@ -20,9 +20,9 @@ architecture behaviour of test_fft1024_spdf is
 	signal phase: unsigned(O-1 downto 0);
 	signal dout: complex;
 	signal debug1: integer;
-	constant delay: integer := 1189;
+	constant delay: integer := 1185;
 begin
-	fft: entity fft1024_spdf_wide generic map(dataBits=>32, twBits=>24)
+	fft: entity fft1024_spdf_wide generic map(dataBits=>32, twBits=>24, inverse=>False)
 		port map(clk,din,phase,dout);
 	process
 		variable l : line;

@@ -1,12 +1,25 @@
 #!/usr/bin/python
 import numpy
-from numpy.fft import ifft
+from numpy.fft import ifft,fft
 from math import *
-import sys
+import sys, argparse
 
 N = 1024
 
-scale = 32
+parser = argparse.ArgumentParser()
+parser.add_argument('verb', type=str, metavar='print|verify')
+parser.add_argument('--inverse', dest='inverse', action='store_const',
+                    const=True, default=False,
+                    help='whether to use inverse FFT')
+
+args = parser.parse_args()
+
+if args.inverse:
+	scale = 32
+	fftfunc = ifft
+else:
+	scale = 1./32
+	fftfunc = fft
 
 def printResult(arr):
 	assert len(arr)==N
@@ -23,10 +36,10 @@ for i in xrange(N*2):
 	im = (i*(i+13)) % 1969;
 	arr.append(re + 1j*im);
 
-if len(sys.argv)>1 and sys.argv[1] == 'verify':
+if args.verb == 'verify':
 	# convert to list, so += concatenates
-	res = [x for x in ifft(arr[:N])]
-	res += [x for x in ifft(arr[N:])]
+	res = [x for x in fftfunc(arr[:N])]
+	res += [x for x in fftfunc(arr[N:])]
 	lines = sys.stdin.readlines()
 	maxDiff = 0.
 	rmsDiff = 0.
@@ -48,7 +61,7 @@ if len(sys.argv)>1 and sys.argv[1] == 'verify':
 	print 'rmsDiff = %.2f' % rmsDiff
 	
 else:
-	printResult(ifft(arr[:N]))
+	printResult(fftfunc(arr[:N]))
 	
 	#tmp = 0
 	#for val in arr[:256]:

@@ -169,7 +169,7 @@ signal {0:s}phase: unsigned({1:d}-1 downto 0);'''.format(id, myLog2(self.N))
 
 	def genBody(self, id):
 		template = '''%sinst: entity %s
-	generic map(dataBits=>%s, scale=>%s)
+	generic map(dataBits=>%s, scale=>%s, inverse=>inverse)
 	port map(clk=>clk, din=>%sdin, phase=>%sphase, dout=>%sdout);'''
 		return template % (id, self.entity,
 					self.dataBits, self.scale,
@@ -228,6 +228,7 @@ class FFT4Step:
 		res = '%s(%d, \n' % (clsName, self.N)
 		res += addIndent(self.sub1.configurationStr()) + ',\n'
 		res += addIndent(self.sub2.configurationStr()) + ',\n'
+		res += '\tmultiplier=' + self.multiplier.configurationStr() + ',\n'
 		res += '\ttwiddleBits=%s)' % serializeSymbol(self.twiddleBits)
 		return res
 	
@@ -386,11 +387,12 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 		
 		if self.simpleTwiddleRom:
 			body += '''
-{0:s}tw: entity twiddleGenerator{7:d} port map(clk, {0:s}twAddr, {0:s}twData);
+{0:s}tw: entity twiddleGenerator{7:d} generic map(inverse=>inverse)
+	port map(clk, {0:s}twAddr, {0:s}twData);
 '''
 		else:
 			body += '''
-{0:s}tw: entity twiddleGenerator generic map({0:s}twiddleBits, {0:s}order)
+{0:s}tw: entity twiddleGenerator generic map({0:s}twiddleBits, {0:s}order, inverse=>inverse)
 	port map(clk, {0:s}twAddr, {0:s}twData, {0:s}romAddr, {0:s}romData);
 {0:s}rom: entity twiddleRom{7:d} port map(clk, {0:s}romAddr,{0:s}romData);
 '''
@@ -421,7 +423,7 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 		if isinstance(obj, FFTBase):
 			return obj.genBody(instanceName)
 		
-		line1 = '{0:s}: entity {1:s} generic map(dataBits=>dataBits, twBits=>twBits)'.format(instanceName, entityName)
+		line1 = '{0:s}: entity {1:s} generic map(dataBits=>dataBits, twBits=>twBits, inverse=>inverse)'.format(instanceName, entityName)
 		line2 = '	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}dout);'.format(instanceName)
 		return line1 + '\n' + line2
 	
@@ -457,7 +459,8 @@ use work.fft_types.all;
 -- delay is {2:d}
 entity {3:s} is
 	generic(dataBits: integer := 24;
-			twBits: integer := 12);
+			twBits: integer := 12;
+			inverse: boolean := true);
 	port(clk: in std_logic;
 		din: in complex;
 		phase: in unsigned({4:d}-1 downto 0);
@@ -642,7 +645,7 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 					]
 		body = '''
 {0:s}spdfStage: entity fft_spdf_stage
-	generic map(N=>{2:d}, dataBits=>dataBits)
+	generic map(N=>{2:d}, dataBits=>dataBits, inverse=>inverse)
 	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}spdfOut);
 
 {0:s}ph1 <= {0:s}phase-{13:d}+1 when rising_edge(clk);
@@ -676,11 +679,12 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 		
 		if self.simpleTwiddleRom:
 			body += '''
-{0:s}tw: entity twiddleGenerator{7:d} port map(clk, {0:s}twAddr, {0:s}twData);
+{0:s}tw: entity twiddleGenerator{7:d} generic map(inverse=>inverse)
+	port map(clk, {0:s}twAddr, {0:s}twData);
 '''
 		else:
 			body += '''
-{0:s}tw: entity twiddleGenerator generic map({0:s}twiddleBits, {0:s}order)
+{0:s}tw: entity twiddleGenerator generic map({0:s}twiddleBits, {0:s}order, inverse=>inverse)
 	port map(clk, {0:s}twAddr, {0:s}twData, {0:s}romAddr, {0:s}romData);
 {0:s}rom: entity twiddleRom{7:d} port map(clk, {0:s}romAddr,{0:s}romData);
 '''
@@ -711,7 +715,7 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 		if obj.isStub:
 			return obj.genBody(instanceName)
 		
-		line1 = '{0:s}: entity {1:s} generic map(dataBits=>dataBits, twBits=>twBits)'.format(instanceName, entityName)
+		line1 = '{0:s}: entity {1:s} generic map(dataBits=>dataBits, twBits=>twBits, inverse=>inverse)'.format(instanceName, entityName)
 		line2 = '	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}dout);'.format(instanceName)
 		return line1 + '\n' + line2
 	
@@ -746,7 +750,8 @@ use work.fft_types.all;
 -- delay is {2:d}
 entity {3:s} is
 	generic(dataBits: integer := 24;
-			twBits: integer := 12);
+			twBits: integer := 12;
+			inverse: boolean := true);
 	port(clk: in std_logic;
 		din: in complex;
 		phase: in unsigned({4:d}-1 downto 0);

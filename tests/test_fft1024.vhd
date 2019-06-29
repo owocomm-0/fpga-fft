@@ -22,7 +22,7 @@ architecture behaviour of test_fft1024 is
 	signal debug1: integer;
 	constant delay: integer := 1227;
 begin
-	fft: entity fft1024_wide generic map(dataBits=>32, twBits=>24)
+	fft: entity fft1024_wide generic map(dataBits=>32, twBits=>24, inverse=>false)
 		port map(clk,din,phase,dout);
 	process
 		variable l : line;

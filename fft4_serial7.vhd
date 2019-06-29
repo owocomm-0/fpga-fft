@@ -10,7 +10,8 @@ use work.fft4_serial6_bf;
 entity fft4_serial7 is
 	generic(dataBits: integer := 18;
 			scale: scalingModes := SCALE_NONE;
-			round: boolean := true);
+			round: boolean := true;
+			inverse: boolean := true);
 
 	port(clk: in std_logic;
 		din: in complex;
@@ -27,7 +28,7 @@ architecture ar of fft4_serial7 is
 	signal oReg0, oReg1, oReg2, oReg3, oReg4, oReg5, oReg6: complex;
 	signal bfRound: std_logic;
 	
-	signal trOutA, trOutB: complexArray(1 downto 0);
+	signal inA, inB, trOutA, trOutB: complexArray(1 downto 0);
 begin
 	
 	ph <= phase+1 when rising_edge(clk);
@@ -72,9 +73,18 @@ begin
 	iReg <= din when rising_edge(clk);
 	iReg2 <= iReg when rising_edge(clk);
 	iReg3 <= iReg2 when (ph=2 or ph=3) and rising_edge(clk);
-	
-	bfIn <= (iReg, iReg3) when ph=3 else
-			(to_complex(iReg2.re, iReg3.im), to_complex(iReg3.re, iReg2.im)) when ph=1 else
+
+g1: if inverse generate
+		inA <= (iReg, iReg3);
+		inB <= (to_complex(iReg2.re, iReg3.im), to_complex(iReg3.re, iReg2.im));
+	end generate;
+g2: if not inverse generate
+		inA <= (iReg, iReg3);
+		inB <= (to_complex(iReg3.re, iReg2.im), to_complex(iReg2.re, iReg3.im));
+	end generate;
+
+	bfIn <= inA when ph=3 else
+			inB when ph=1 else
 			trOutA when ph=0 else
 			trOutB;
 	bfRound <= '1' when ph=0 or ph=2 else

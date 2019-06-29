@@ -15,7 +15,8 @@ entity twiddleGenerator is
 				-- real depth is 2^depth_order
 				depthOrder: integer := 9;
 				romDelay: integer := 2;
-				reducedBits: boolean := false);
+				reducedBits: boolean := false;
+				inverse: boolean := true);
 	port(clk: in std_logic;
 			-- read side; synchronous to rdclk
 			rdAddr: in unsigned(depthOrder-1 downto 0);
@@ -80,15 +81,28 @@ begin
 	im_M <= -im when rising_edge(clk);
 	ph4 <= ph3 when rising_edge(clk);
 	-- 4+romDelay cycles
-	
-	outData0 <= to_complex(re_P,im_P)	when ph4=0 else
-				to_complex(im_P,re_P)	when ph4=1 else
-				to_complex(im_M,re_P)	when ph4=2 else
-				to_complex(re_M,im_P)	when ph4=3 else
-				to_complex(re_M,im_M)	when ph4=4 else
-				to_complex(im_M,re_M)	when ph4=5 else
-				to_complex(im_P,re_M)	when ph4=6 else
-				to_complex(re_P,im_M); --when ph4=7;
+
+g1: if not inverse generate
+		outData0 <= to_complex(re_P,im_M)	when ph4=0 else
+					to_complex(im_P,re_M)	when ph4=1 else
+					to_complex(im_M,re_M)	when ph4=2 else
+					to_complex(re_M,im_M)	when ph4=3 else
+					to_complex(re_M,im_P)	when ph4=4 else
+					to_complex(im_M,re_P)	when ph4=5 else
+					to_complex(im_P,re_P)	when ph4=6 else
+					to_complex(re_P,im_P); --when ph4=7;
+	end generate;
+g2: if inverse generate
+		outData0 <= to_complex(re_P,im_P)	when ph4=0 else
+					to_complex(im_P,re_P)	when ph4=1 else
+					to_complex(im_M,re_P)	when ph4=2 else
+					to_complex(re_M,im_P)	when ph4=3 else
+					to_complex(re_M,im_M)	when ph4=4 else
+					to_complex(im_M,re_M)	when ph4=5 else
+					to_complex(im_P,re_M)	when ph4=6 else
+					to_complex(re_P,im_M); --when ph4=7;
+	end generate;
+
 	outData <= outData0 when rising_edge(clk);
 	rdData <= outData;
 	-- 5+romDelay cycles

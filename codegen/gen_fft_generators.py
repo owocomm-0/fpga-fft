@@ -228,9 +228,14 @@ def genReordererWrapper(fft, rows, entityName, fftName):
 	colBits = myLog2(fft.N)
 	rowBits = myLog2(rows)
 	totalBits = colBits + rowBits
+	skipInputReorder = (rows == 1) and bitOrderIsNatural(fft.inputBitOrder())
+
 	reorderDelay = fft.N * rows
-	delay = reorderDelay*2 + fft.delay()
-	
+
+	delay = reorderDelay + fft.delay()
+	if not skipInputReorder:
+		delay += reorderDelay
+
 	code = '''
 library ieee;
 library work;
@@ -263,17 +268,25 @@ architecture ar of {1:s} is
 	signal core_din, core_dout: complex;
 	signal core_phase: unsigned({2:d}-1 downto 0);
 	signal oreorderer_phase: unsigned({2:d}-1 downto 0);
+begin
 '''.format(*params)
 
 	#          0         1      2         3            4
 	params = [fftName, rows, colBits, reorderDelay, fft.delay()]
-	code += '''
-begin
+	
+	if skipInputReorder:
+		code += '''
+	core_din <= din;
+	core_phase <= phase;
+'''
+	else:
+		code += '''
 	ireorder: entity {0:s}_ireorderer{1:d} generic map(dataBits=>dataBits)
 		port map(clk=>clk, phase=>phase, din=>din, dout=>core_din);
-	
+
 	core_phase <= phase - {3:d} + 1 when rising_edge(clk);
-	
+'''
+	code += '''
 	core: entity {0:s} generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>clk, phase=>core_phase({2:d}-1 downto 0), din=>core_din, dout=>core_dout);
 	

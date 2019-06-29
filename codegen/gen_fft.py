@@ -66,8 +66,15 @@ if outpType == 'fft':
 if outpType == 'reorderer':
 	# generate reorderers for 1, 2, and 4 rows of data
 	for rows in [1,2,4]:
-		print genReorderer(instance, False, rows, instanceName + '_ireorderer' + str(rows))
-		print genReorderer(instance, True, rows, instanceName + '_oreorderer' + str(rows))
+		if bitOrderIsNatural(instance.inputBitOrder()) and rows == 1:
+			print '-- no input reorder generated because input is already natural order'
+		else:
+			print genReorderer(instance, False, rows, instanceName + '_ireorderer' + str(rows))
+
+		if bitOrderIsNatural(instance.outputBitOrder()) and rows == 1:
+			print '-- no output reorder generated because output is already natural order'
+		else:
+			print genReorderer(instance, True, rows, instanceName + '_oreorderer' + str(rows))
 
 if outpType == 'wrapper':
 	for rows in [1,2,4]:

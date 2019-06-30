@@ -28,10 +28,10 @@ architecture ar of fft1024_wide_wrapper1 is
 	signal oreorderer_phase: unsigned(10-1 downto 0);
 begin
 
-	ireorder: entity {0:s}_ireorderer{1:d} generic map(dataBits=>dataBits)
+	ireorder: entity fft1024_wide_ireorderer1 generic map(dataBits=>dataBits)
 		port map(clk=>clk, phase=>phase, din=>din, dout=>core_din);
 
-	core_phase <= phase - {3:d} + 1 when rising_edge(clk);
+	core_phase <= phase - 1024 + 1 when rising_edge(clk);
 
 	core: entity fft1024_wide generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>clk, phase=>core_phase(10-1 downto 0), din=>core_din, dout=>core_dout);
@@ -72,10 +72,10 @@ architecture ar of fft1024_wide_wrapper2 is
 	signal oreorderer_phase: unsigned(11-1 downto 0);
 begin
 
-	ireorder: entity {0:s}_ireorderer{1:d} generic map(dataBits=>dataBits)
+	ireorder: entity fft1024_wide_ireorderer2 generic map(dataBits=>dataBits)
 		port map(clk=>clk, phase=>phase, din=>din, dout=>core_din);
 
-	core_phase <= phase - {3:d} + 1 when rising_edge(clk);
+	core_phase <= phase - 2048 + 1 when rising_edge(clk);
 
 	core: entity fft1024_wide generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>clk, phase=>core_phase(10-1 downto 0), din=>core_din, dout=>core_dout);
@@ -116,10 +116,10 @@ architecture ar of fft1024_wide_wrapper4 is
 	signal oreorderer_phase: unsigned(12-1 downto 0);
 begin
 
-	ireorder: entity {0:s}_ireorderer{1:d} generic map(dataBits=>dataBits)
+	ireorder: entity fft1024_wide_ireorderer4 generic map(dataBits=>dataBits)
 		port map(clk=>clk, phase=>phase, din=>din, dout=>core_din);
 
-	core_phase <= phase - {3:d} + 1 when rising_edge(clk);
+	core_phase <= phase - 4096 + 1 when rising_edge(clk);
 
 	core: entity fft1024_wide generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>clk, phase=>core_phase(10-1 downto 0), din=>core_din, dout=>core_dout);

@@ -103,7 +103,7 @@ largeMult = Multiplier('dsp48e1_complexMultiply', 9)
 
 
 class FFTBase:
-	def __init__(self, N, entity, scale, delay1):
+	def __init__(self, N, entity, scale, delay1, iBitOrder=None, oBitOrder=None):
 		self.N = N
 		self.isBase = True
 		self.isStub = True
@@ -112,22 +112,39 @@ class FFTBase:
 		self.delay1 = delay1
 		self.dataBits = 'dataBits'
 		self.imports = [entity]
-		self.iBitOrder = range(myLog2(self.N))
-		self.oBitOrder = range(myLog2(self.N))
+		if iBitOrder == None:
+			self.iBitOrder = range(myLog2(self.N))
+		else:
+			self.iBitOrder = iBitOrder
+
+		if oBitOrder == None:
+			self.oBitOrder = range(myLog2(self.N))
+		else:
+			self.oBitOrder = oBitOrder
+
+		assert len(self.iBitOrder) == myLog2(self.N)
+		assert len(self.oBitOrder) == myLog2(self.N)
 
 	def setInputBitOrder(self, bitOrder):
 		assert len(bitOrder) == myLog2(self.N)
 		self.iBitOrder = bitOrder
-	
+
 	def setOutputBitOrder(self, bitOrder):
 		assert len(bitOrder) == myLog2(self.N)
 		self.oBitOrder = bitOrder
 
 	def configurationStr(self):
 		clsName = self.__class__.__name__
-		res = "%s(%d, '%s', '%s', %d)" % (clsName, self.N, self.entity, self.scale, self.delay1)
+
+		extraParams = ''
+		if (not bitOrderIsNatural(self.iBitOrder)) or (not bitOrderIsNatural(self.oBitOrder)):
+			extraParams += ', ' + str(self.iBitOrder)
+			extraParams += ', ' + str(self.oBitOrder)
+
+		res = "%s(%d, '%s', '%s', %d%s)" % (
+				clsName, self.N, self.entity, self.scale, self.delay1, extraParams)
 		return res
-	
+
 	def descriptionStr(self):
 		return "%d: base, '%s', scale='%s', delay=%d" % (self.N, self.entity, self.scale, self.delay1)
 	

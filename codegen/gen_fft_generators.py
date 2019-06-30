@@ -285,7 +285,7 @@ begin
 		port map(clk=>clk, phase=>phase, din=>din, dout=>core_din);
 
 	core_phase <= phase - {3:d} + 1 when rising_edge(clk);
-'''
+'''.format(*params)
 	code += '''
 	core: entity {0:s} generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>clk, phase=>core_phase({2:d}-1 downto 0), din=>core_din, dout=>core_dout);

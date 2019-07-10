@@ -18,22 +18,39 @@ entity fft4_serial6_bf is
 end entity;
 
 architecture a of fft4_serial6_bf is
-	signal carry: signed(carryPosition+1 downto 0);
-	signal a,b: complexArray(1 downto 0);
-	signal c: complex;
+	signal roundIn1: std_logic;
+	signal carry1, carry2: signed(carryPosition+1 downto 0);
+	signal a,b,b1: complexArray(1 downto 0);
+	signal c1, c2, cA, cB: complex;
 begin
 	a <= din when rising_edge(clk);
+	roundIn1 <= roundIn when rising_edge(clk);
 
 g1: if carryPosition = -1 generate
-		c <= to_complex(0,0);
+		cA <= to_complex(0,0);
+		cB <= to_complex(0,0);
 	end generate;
 g2: if carryPosition >= 0 generate
-		carry <= "0" & roundIn & (carryPosition-1 downto 0=>'0');
-		c <= to_complex(carry, carry) when rising_edge(clk);
+		carry1 <= "0" & roundIn & (carryPosition-1 downto 0=>'0');
+		carry2 <= "00" & (carryPosition-1 downto 0=>roundIn);
+		c1 <= to_complex(carry1, carry1) when rising_edge(clk);
+		c2 <= to_complex(carry2, carry2) when rising_edge(clk);
+		cA <= c1 when a(0).re(carryPosition+1)='1' else c2;
+		--cB <= c1 when b(0).re(carryPosition+1)='0' else c2;
+		cB <= cA;
 	end generate;
+--g2: if carryPosition = 0 generate
+--		c <= to_complex(1, 1) when roundIn1='1' else
+--			to_complex(0, 0);
+--	end generate;
+--g3: if carryPosition = 1 generate
+--	end generate;
 	
-	b(0) <= a(0) + a(1) + c;
-	b(1) <= a(0) - a(1) + c;
+	--b(0) <= round_convergent(a(0) + a(1), roundIn1, carryPosition);
+	--b(1) <= round_convergent(a(0) - a(1), roundIn1, carryPosition);
+	
+	b(0) <= a(0) + a(1) + cA;
+	b(1) <= a(0) - a(1) + cB;
 	
 	dout(0) <= keepNBits(b(0), dataBits);
 	dout(1) <= keepNBits(b(1), dataBits);

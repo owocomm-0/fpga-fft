@@ -41,6 +41,7 @@ package fft_types is
     function complex_swap(val: complex) return complex;
     function rotate_quarter(val: complex) return complex;
     function rotate_mquarter(val: complex) return complex;
+    function round_convergent(val: complex; enable: std_logic; position: integer) return complex;
     
     
 	type complexArray is array(integer range<>) of complex;
@@ -202,6 +203,29 @@ package body fft_types is
 	begin
 		res.im := -val.re;
 		res.re := val.im;
+		return res;
+	end function;
+	
+	
+	function round_convergent(val: complex; enable: std_logic; position: integer) return complex is
+		variable res: complex;
+		variable c1, c2: signed(position+1 downto 0);
+	begin
+		if position = -1 then
+			return val;
+		end if;
+		c1 := "0" & enable & (position-1 downto 0=>'0');
+		c2 := "00" & (position-1 downto 0=>enable);
+		if val.re(position+1) = '1' then
+			res.re := val.re + c1;
+		else
+			res.re := val.re + c2;
+		end if;
+		if val.im(position+1) = '1' then
+			res.im := val.im + c1;
+		else
+			res.im := val.im + c2;
+		end if;
 		return res;
 	end function;
 	

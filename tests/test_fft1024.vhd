@@ -31,6 +31,7 @@ begin
 		variable ii, oi: unsigned(O-1 downto 0);
 		variable inputPerm: unsigned(O-1 downto 0);
 		variable outputPerm: unsigned(O-1 downto 0);
+		variable dout1: complex;
 		
 		-- 2 full frames
 		type arr_t is array(0 to N*4-1) of integer;
@@ -82,8 +83,9 @@ begin
 			
 			
 			if I >= delay then
+				dout1 := shift_right(dout + to_complex(2, 2), 2);
 				write(output, integer'image(to_integer(outputPerm) + o2*N) & ": ");
-				write(output, complex_str(dout) & LF);
+				write(output, complex_str(dout1) & LF);
 			end if;
 			wait for 1 ns; clk <= '1'; wait for 1 ns; clk <= '0';
 			--write(output, integer'image(debug1) & LF);

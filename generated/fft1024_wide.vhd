@@ -4,12 +4,12 @@
 --1024: twiddleBits=twBits, delay=1227
 --	64: twiddleBits=twBits, delay=131
 --		16: twiddleBits=twBits, delay=47
---			4: base, 'fft4_serial7', scale='SCALE_NONE', delay=11
---			4: base, 'fft4_serial7', scale='SCALE_NONE', delay=11
---		4: base, 'fft4_serial7', scale='SCALE_DIV_SQRT_N', delay=11
+--			4: base, 'fft4_serial7', scale='SCALE_NONE', bitGrowth=1, delay=11
+--			4: base, 'fft4_serial7', scale='SCALE_NONE', bitGrowth=1, delay=11
+--		4: base, 'fft4_serial7', scale='SCALE_DIV_SQRT_N', bitGrowth=0, delay=11
 --	16: twiddleBits=twBits, delay=47
---		4: base, 'fft4_serial7', scale='SCALE_DIV_N', delay=11
---		4: base, 'fft4_serial7', scale='SCALE_DIV_N', delay=11
+--		4: base, 'fft4_serial7', scale='SCALE_DIV_SQRT_N', bitGrowth=0, delay=11
+--		4: base, 'fft4_serial7', scale='SCALE_DIV_SQRT_N', bitGrowth=0, delay=11
 
 
 
@@ -45,10 +45,14 @@ architecture ar of fft1024_wide_sub16 is
 	signal sub1phase: unsigned(2-1 downto 0);
 	signal sub2phase: unsigned(2-1 downto 0);
 	constant N: integer := 16;
+	constant dataBitsIntern: integer := dataBits + 1;
+	constant dataBitsOut: integer := dataBits + 2;
 	constant twiddleBits: integer := twBits;
 	constant twiddleDelay: integer := 2;
 	constant order: integer := 4;
 	constant delay: integer := 47;
+	constant sub1dataBits: integer := dataBits;
+	constant sub2dataBits: integer := dataBitsIntern;
 
 
 	--=======================================
@@ -71,7 +75,7 @@ begin
 	ph1 <= phase-11+1 when rising_edge(clk);
 
 	transp: entity transposer
-		generic map(N1=>2, N2=>2, dataBits=>dataBits)
+		generic map(N1=>2, N2=>2, dataBits=>dataBitsIntern)
 		port map(clk=>clk, din=>sub1dout, phase=>ph1, dout=>transpOut);
 
 	ph2 <= ph1;
@@ -91,8 +95,8 @@ begin
 
 	twMult: entity dsp48e1_complexMultiply
 		generic map(in1Bits=>twiddleBits+1,
-					in2Bits=>dataBits,
-					outBits=>dataBits)
+					in2Bits=>dataBitsIntern,
+					outBits=>dataBitsIntern)
 		port map(clk=>clk, in1=>twData, in2=>transpOut, out1=>sub2din);
 
 	ph3 <= ph2-9+1 when rising_edge(clk);
@@ -103,10 +107,10 @@ begin
 	tw: entity twiddleGenerator16 generic map(inverse=>inverse)
 		port map(clk, twAddr, twData);
 	sub1inst: entity fft4_serial7
-		generic map(dataBits=>dataBits, scale=>SCALE_NONE, inverse=>inverse)
+		generic map(dataBits=>sub1dataBits, scale=>SCALE_NONE, bitGrowth=>1, inverse=>inverse)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
 	sub2inst: entity fft4_serial7
-		generic map(dataBits=>dataBits, scale=>SCALE_NONE, inverse=>inverse)
+		generic map(dataBits=>sub2dataBits, scale=>SCALE_NONE, bitGrowth=>1, inverse=>inverse)
 		port map(clk=>clk, din=>sub2din, phase=>sub2phase, dout=>sub2dout);
 
 end ar;
@@ -147,10 +151,14 @@ architecture ar of fft1024_wide_sub64 is
 	signal sub1phase: unsigned(4-1 downto 0);
 	signal sub2phase: unsigned(2-1 downto 0);
 	constant N: integer := 64;
+	constant dataBitsIntern: integer := dataBits + 2;
+	constant dataBitsOut: integer := dataBits + 2;
 	constant twiddleBits: integer := twBits;
 	constant twiddleDelay: integer := 7;
 	constant order: integer := 6;
 	constant delay: integer := 131;
+	constant sub1dataBits: integer := dataBits;
+	constant sub2dataBits: integer := dataBitsIntern;
 
 
 	--=======================================
@@ -173,7 +181,7 @@ begin
 	ph1 <= phase-47+1 when rising_edge(clk);
 
 	transp: entity transposer
-		generic map(N1=>2, N2=>4, dataBits=>dataBits)
+		generic map(N1=>2, N2=>4, dataBits=>dataBitsIntern)
 		port map(clk=>clk, din=>sub1dout, phase=>ph1, dout=>transpOut);
 
 	ph2 <= ph1;
@@ -193,8 +201,8 @@ begin
 
 	twMult: entity dsp48e1_complexMultiply
 		generic map(in1Bits=>twiddleBits+1,
-					in2Bits=>dataBits,
-					outBits=>dataBits)
+					in2Bits=>dataBitsIntern,
+					outBits=>dataBitsIntern)
 		port map(clk=>clk, in1=>twData, in2=>transpOut, out1=>sub2din);
 
 	ph3 <= ph2-9+1 when rising_edge(clk);
@@ -205,10 +213,10 @@ begin
 	tw: entity twiddleGenerator generic map(twiddleBits, order, inverse=>inverse)
 		port map(clk, twAddr, twData, romAddr, romData);
 	rom: entity twiddleRom64 port map(clk, romAddr,romData);
-	sub1: entity fft1024_wide_sub16 generic map(dataBits=>dataBits, twBits=>twBits, inverse=>inverse)
+	sub1: entity fft1024_wide_sub16 generic map(dataBits=>sub1dataBits, twBits=>twBits, inverse=>inverse)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
 	sub2inst: entity fft4_serial7
-		generic map(dataBits=>dataBits, scale=>SCALE_DIV_SQRT_N, inverse=>inverse)
+		generic map(dataBits=>sub2dataBits, scale=>SCALE_DIV_SQRT_N, inverse=>inverse)
 		port map(clk=>clk, din=>sub2din, phase=>sub2phase, dout=>sub2dout);
 
 end ar;
@@ -247,10 +255,14 @@ architecture ar of fft1024_wide_sub16_2 is
 	signal sub1phase: unsigned(2-1 downto 0);
 	signal sub2phase: unsigned(2-1 downto 0);
 	constant N: integer := 16;
+	constant dataBitsIntern: integer := dataBits + 0;
+	constant dataBitsOut: integer := dataBits + 0;
 	constant twiddleBits: integer := twBits;
 	constant twiddleDelay: integer := 2;
 	constant order: integer := 4;
 	constant delay: integer := 47;
+	constant sub1dataBits: integer := dataBits;
+	constant sub2dataBits: integer := dataBitsIntern;
 
 
 	--=======================================
@@ -273,7 +285,7 @@ begin
 	ph1 <= phase-11+1 when rising_edge(clk);
 
 	transp: entity transposer
-		generic map(N1=>2, N2=>2, dataBits=>dataBits)
+		generic map(N1=>2, N2=>2, dataBits=>dataBitsIntern)
 		port map(clk=>clk, din=>sub1dout, phase=>ph1, dout=>transpOut);
 
 	ph2 <= ph1;
@@ -293,8 +305,8 @@ begin
 
 	twMult: entity dsp48e1_complexMultiply
 		generic map(in1Bits=>twiddleBits+1,
-					in2Bits=>dataBits,
-					outBits=>dataBits)
+					in2Bits=>dataBitsIntern,
+					outBits=>dataBitsIntern)
 		port map(clk=>clk, in1=>twData, in2=>transpOut, out1=>sub2din);
 
 	ph3 <= ph2-9+1 when rising_edge(clk);
@@ -305,10 +317,10 @@ begin
 	tw: entity twiddleGenerator16 generic map(inverse=>inverse)
 		port map(clk, twAddr, twData);
 	sub1inst: entity fft4_serial7
-		generic map(dataBits=>dataBits, scale=>SCALE_DIV_N, inverse=>inverse)
+		generic map(dataBits=>sub1dataBits, scale=>SCALE_DIV_SQRT_N, inverse=>inverse)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
 	sub2inst: entity fft4_serial7
-		generic map(dataBits=>dataBits, scale=>SCALE_DIV_N, inverse=>inverse)
+		generic map(dataBits=>sub2dataBits, scale=>SCALE_DIV_SQRT_N, inverse=>inverse)
 		port map(clk=>clk, din=>sub2din, phase=>sub2phase, dout=>sub2dout);
 
 end ar;
@@ -350,10 +362,14 @@ architecture ar of fft1024_wide is
 	signal sub1phase: unsigned(6-1 downto 0);
 	signal sub2phase: unsigned(4-1 downto 0);
 	constant N: integer := 1024;
+	constant dataBitsIntern: integer := dataBits + 2;
+	constant dataBitsOut: integer := dataBits + 2;
 	constant twiddleBits: integer := twBits;
 	constant twiddleDelay: integer := 7;
 	constant order: integer := 10;
 	constant delay: integer := 1227;
+	constant sub1dataBits: integer := dataBits;
+	constant sub2dataBits: integer := dataBitsIntern;
 
 
 	--=======================================
@@ -380,7 +396,7 @@ begin
 	ph1 <= phase-131+1 when rising_edge(clk);
 
 	transp: entity transposer
-		generic map(N1=>4, N2=>6, dataBits=>dataBits)
+		generic map(N1=>4, N2=>6, dataBits=>dataBitsIntern)
 		port map(clk=>clk, din=>sub1dout, phase=>ph1, dout=>transpOut);
 
 	ph2 <= ph1;
@@ -400,8 +416,8 @@ begin
 
 	twMult: entity dsp48e1_complexMultiply
 		generic map(in1Bits=>twiddleBits+1,
-					in2Bits=>dataBits,
-					outBits=>dataBits)
+					in2Bits=>dataBitsIntern,
+					outBits=>dataBitsIntern)
 		port map(clk=>clk, in1=>twData, in2=>transpOut, out1=>rbIn);
 
 	ph3 <= ph2-9+1 when rising_edge(clk);
@@ -416,14 +432,14 @@ begin
 
 
 	rb: entity reorderBuffer
-		generic map(N=>4, dataBits=>dataBits, repPeriod=>2, bitPermDelay=>0, dataPathDelay=>0)
+		generic map(N=>4, dataBits=>dataBitsIntern, repPeriod=>2, bitPermDelay=>0, dataPathDelay=>0)
 		port map(clk, din=>rbIn, phase=>rbInPhase, dout=>sub2din,
 			bitPermIn=>rP0, bitPermCount=>rCnt, bitPermOut=>rP1);
 
 	sub2phase <= rbInPhase-0;
-	sub1: entity fft1024_wide_sub64 generic map(dataBits=>dataBits, twBits=>twBits, inverse=>inverse)
+	sub1: entity fft1024_wide_sub64 generic map(dataBits=>sub1dataBits, twBits=>twBits, inverse=>inverse)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
-	sub2: entity fft1024_wide_sub16_2 generic map(dataBits=>dataBits, twBits=>twBits, inverse=>inverse)
+	sub2: entity fft1024_wide_sub16_2 generic map(dataBits=>sub2dataBits, twBits=>twBits, inverse=>inverse)
 		port map(clk=>clk, din=>sub2din, phase=>sub2phase, dout=>sub2dout);
 
 end ar;
@@ -434,16 +450,16 @@ end ar;
 --FFT4Step(1024, 
 --	FFT4Step(64, 
 --		FFT4Step(16, 
---			FFTBase(4, 'fft4_serial7', 'SCALE_NONE', 11, [0, 1], [1, 0]),
---			FFTBase(4, 'fft4_serial7', 'SCALE_NONE', 11, [0, 1], [1, 0]),
+--			FFTBase(4, 'fft4_serial7', 'SCALE_NONE', 11, bitGrowth=1, oBitOrder=[1, 0]),
+--			FFTBase(4, 'fft4_serial7', 'SCALE_NONE', 11, bitGrowth=1, oBitOrder=[1, 0]),
 --			multiplier=Multiplier('dsp48e1_complexMultiply', 9),
 --			twiddleBits='twBits'),
---		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_SQRT_N', 11, [0, 1], [1, 0]),
+--		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_SQRT_N', 11, oBitOrder=[1, 0]),
 --		multiplier=Multiplier('dsp48e1_complexMultiply', 9),
 --		twiddleBits='twBits'),
 --	FFT4Step(16, 
---		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_N', 11, [0, 1], [1, 0]),
---		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_N', 11, [0, 1], [1, 0]),
+--		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_SQRT_N', 11, oBitOrder=[1, 0]),
+--		FFTBase(4, 'fft4_serial7', 'SCALE_DIV_SQRT_N', 11, oBitOrder=[1, 0]),
 --		multiplier=Multiplier('dsp48e1_complexMultiply', 9),
 --		twiddleBits='twBits'),
 --	multiplier=Multiplier('dsp48e1_complexMultiply', 9),

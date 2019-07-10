@@ -103,14 +103,14 @@ largeMult = Multiplier('dsp48e1_complexMultiply', 9)
 
 
 class FFTBase:
-	def __init__(self, N, entity, scale, delay1, iBitOrder=None, oBitOrder=None):
+	def __init__(self, N, entity, scale, delay1, bitGrowth=0, iBitOrder=None, oBitOrder=None):
 		self.N = N
 		self.isBase = True
 		self.isStub = True
 		self.entity = entity
 		self.scale = scale
 		self.delay1 = delay1
-		self.dataBits = 'dataBits'
+		self.bitGrowth = bitGrowth
 		self.imports = [entity]
 		if iBitOrder == None:
 			self.iBitOrder = range(myLog2(self.N))
@@ -137,17 +137,24 @@ class FFTBase:
 		clsName = self.__class__.__name__
 
 		extraParams = ''
-		if (not bitOrderIsNatural(self.iBitOrder)) or (not bitOrderIsNatural(self.oBitOrder)):
-			extraParams += ', ' + str(self.iBitOrder)
-			extraParams += ', ' + str(self.oBitOrder)
+
+		if self.bitGrowth != 0:
+			extraParams += ', bitGrowth=' + str(self.bitGrowth)
+
+		if (not bitOrderIsNatural(self.iBitOrder)):
+			extraParams += ', iBitOrder=' + str(self.iBitOrder)
+
+		if (not bitOrderIsNatural(self.oBitOrder)):
+			extraParams += ', oBitOrder=' + str(self.oBitOrder)
 
 		res = "%s(%d, '%s', '%s', %d%s)" % (
 				clsName, self.N, self.entity, self.scale, self.delay1, extraParams)
 		return res
 
 	def descriptionStr(self):
-		return "%d: base, '%s', scale='%s', delay=%d" % (self.N, self.entity, self.scale, self.delay1)
-	
+		return "%d: base, '%s', scale='%s', bitGrowth=%d, delay=%d" % (
+					self.N, self.entity, self.scale, self.bitGrowth, self.delay1)
+
 	# returns the mapping from temporal order to natural order; 
 	# inputBitOrder()[0] is the source address of bit 0 in the output of the mapping.
 	# e.g. bitOrder of [1,2,3,0] will transform 0b0001 to 0b1000
@@ -185,12 +192,19 @@ signal {0:s}din, {0:s}dout: complex;
 signal {0:s}phase: unsigned({1:d}-1 downto 0);'''.format(id, myLog2(self.N))
 
 	def genBody(self, id):
+		extraParams = ''
+		if self.bitGrowth != 0:
+			extraParams += ', bitGrowth=>' + str(self.bitGrowth)
+
 		template = '''%sinst: entity %s
-	generic map(dataBits=>%s, scale=>%s, inverse=>inverse)
+	generic map(dataBits=>%sdataBits, scale=>%s%s, inverse=>inverse)
 	port map(clk=>clk, din=>%sdin, phase=>%sphase, dout=>%sdout);'''
 		return template % (id, self.entity,
-					self.dataBits, self.scale,
+					id, self.scale, extraParams,
 					id, id, id);
+
+	def genStub(self, instanceName, entityName):
+		return self.genBody(instanceName)
 
 	def delay(self):
 		return self.delay1
@@ -204,11 +218,12 @@ class FFT4Step:
 		self.sub1 = sub1
 		self.sub2 = sub2
 		self.twiddleBits = twiddleBits
+		self.bitGrowth = sub1.bitGrowth + sub2.bitGrowth
 		self.reorderAdditiveDelay = 0
 		self.multiplier = multiplier
 		self.multDelay = multiplier.delay()
 		self.imports = ['twiddleAddrGen', 'transposer']
-		
+
 		if N > 32:
 			self.simpleTwiddleRom = False
 			self.twiddleDelay = 7
@@ -225,6 +240,17 @@ class FFT4Step:
 			self.imports.append('reorderBuffer')
 		else:
 			self.sub2Transposer = False
+
+	# def setDataBits(self, dataBits):
+		# if self.dataBits == dataBits:
+			# return
+
+		# self.dataBits = dataBits
+		# self.sub1.setDataBits(dataBits)
+		# if self.sub1.bitGrowth == 0:
+			# self.sub2.setDataBits(dataBits)
+		# else:
+			# self.sub2.setDataBits(dataBits + ' + ' + str(self.sub1.bitGrowth))
 
 	def setMultiplier(self, multiplier, recursive=True):
 		self.multiplier = multiplier
@@ -284,7 +310,7 @@ class FFT4Step:
 		return id + 'dout'
 	def sigPhase(self, id):
 		return id + 'phase'
-	
+
 	def getImports(self, recursive=True):
 		ret = self.imports
 		ret.append(self.multiplier.entity)
@@ -293,12 +319,16 @@ class FFT4Step:
 			ret.extend(self.sub2.getImports())
 		return ret
 
-	def genConstants(self, id):
+	def genConstants(self, id, sub1, sub2):
 		constantsArr = ['N', self.N,
+					'dataBitsIntern', id + 'dataBits + ' + str(self.sub1.bitGrowth),
+					'dataBitsOut', id + 'dataBits + ' + str(self.bitGrowth),
 					'twiddleBits', self.twiddleBits,
 					'twiddleDelay', self.twiddleDelay,
 					'order', myLog2(self.N),
-					'delay', self.delay()]
+					'delay', self.delay(),
+					sub1 + 'dataBits', id + 'dataBits',
+					sub2 + 'dataBits', id + 'dataBitsIntern']
 		constants = ''
 		for i in xrange(0, len(constantsArr), 2):
 			name = constantsArr[i]
@@ -372,7 +402,7 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 {0:s}ph1 <= {0:s}phase-{13:d}+1 when rising_edge(clk);
 
 {0:s}transp: entity transposer
-	generic map(N1=>{12:d}, N2=>{11:d}, dataBits=>dataBits)
+	generic map(N1=>{12:d}, N2=>{11:d}, dataBits=>{0:s}dataBitsIntern)
 	port map(clk=>clk, din=>{1:s}dout, phase=>{0:s}ph1, dout=>{0:s}transpOut);
 
 {0:s}ph2 <= {0:s}ph1;
@@ -392,8 +422,8 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 
 {0:s}twMult: entity {15:s}
 	generic map(in1Bits=>{0:s}twiddleBits+1,
-				in2Bits=>dataBits,
-				outBits=>dataBits)
+				in2Bits=>{0:s}dataBitsIntern,
+				outBits=>{0:s}dataBitsIntern)
 	port map(clk=>clk, in1=>{0:s}twData, in2=>{0:s}transpOut, out1=>{3:s});
 
 {0:s}ph3 <= {0:s}ph2-{8:d}+1 when rising_edge(clk);
@@ -427,7 +457,7 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 			body += '''
 	
 {0:s}rb: entity reorderBuffer
-	generic map(N=>{1:d}, dataBits=>dataBits, repPeriod=>{7:d}, bitPermDelay=>0, dataPathDelay=>{6:d})
+	generic map(N=>{1:d}, dataBits=>{0:s}dataBitsIntern, repPeriod=>{7:d}, bitPermDelay=>0, dataPathDelay=>{6:d})
 	port map(clk, din=>{0:s}rbIn, phase=>{0:s}rbInPhase, dout=>{5:s}din,
 		bitPermIn=>{2:s}, bitPermCount=>{3:s}, bitPermOut=>{4:s});
 	
@@ -435,15 +465,12 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 	
 '''.format(*params)
 		return body
-	
-	def _genSubInst(self, instanceName, entityName, obj):
-		if isinstance(obj, FFTBase):
-			return obj.genBody(instanceName)
-		
-		line1 = '{0:s}: entity {1:s} generic map(dataBits=>dataBits, twBits=>twBits, inverse=>inverse)'.format(instanceName, entityName)
+
+	def genStub(self, instanceName, entityName):
+		line1 = '{0:s}: entity {1:s} generic map(dataBits=>{0:s}dataBits, twBits=>twBits, inverse=>inverse)'.format(instanceName, entityName)
 		line2 = '	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}dout);'.format(instanceName)
 		return line1 + '\n' + line2
-	
+
 	def genEntity(self, entityName, sub1Name, sub2Name):
 		code = '''
 library ieee;
@@ -490,15 +517,15 @@ architecture ar of {3:s} is
 	signal sub2phase: unsigned({6:d}-1 downto 0);
 '''.format(*params)
 		
-		code += indent(self.genConstants(''), 1)
+		code += indent(self.genConstants('', 'sub1', 'sub2'), 1)
 		code += '\n\n\t--=======================================\n\n'
 		code += indent(self.genDeclarations('', 'sub1', 'sub2', False), 1)
 		code += '''
 begin
 '''
 		code += indent(self.genBody('', 'sub1', 'sub2'), 1)
-		code += indent(self._genSubInst('sub1', sub1Name, self.sub1), 1)
-		code += indent(self._genSubInst('sub2', sub2Name, self.sub2), 1)
+		code += indent(self.sub1.genStub('sub1', sub1Name), 1)
+		code += indent(self.sub2.genStub('sub2', sub2Name), 1)
 		code += '''
 end ar;
 '''
@@ -506,12 +533,14 @@ end ar;
 
 
 class FFTSPDF:
-	def __init__(self, N, sub1, multiplier=defaultMult, twiddleBits='twBits'):
+	def __init__(self, N, sub1, bfBitGrowth=0, multiplier=defaultMult, twiddleBits='twBits'):
 		assert N == (sub1.N*4)
 		self.N = N
 		self.isBase = False
 		self.isStub = False
 		self.sub1 = sub1
+		self.bfBitGrowth = bfBitGrowth
+		self.bitGrowth = sub1.bitGrowth + bfBitGrowth
 		self.multiplier = multiplier
 		self.multDelay = multiplier.delay()
 		self.twiddleBits = twiddleBits
@@ -552,12 +581,14 @@ class FFTSPDF:
 		res = '%s(%d, \n' % (clsName, self.N)
 		res += addIndent(self.sub1.configurationStr()) + ',\n'
 		res += '\tmultiplier=' + self.multiplier.configurationStr() + ',\n'
+		res += '\tbfBitGrowth=%s)' % serializeSymbol(self.bfBitGrowth) + ',\n'
 		res += '\ttwiddleBits=%s)' % serializeSymbol(self.twiddleBits)
 		return res
 	
 	def descriptionStr(self):
 		res = '%d: twiddleBits=%s, delay=%d\n' % (self.N, str(self.twiddleBits), self.delay())
-		res += '\t4: (spdf stage), delay=%d\n' % (self.spdf_delay,)
+		res += '\t4: (spdf stage), delay=%d, bitGrowth=%s\n' % (
+					self.spdf_delay, str(self.bfBitGrowth))
 		res += addIndent(self.sub1.descriptionStr())
 		return res
 	
@@ -591,12 +622,15 @@ class FFTSPDF:
 			ret.extend(self.sub1.getImports())
 		return ret
 	
-	def genConstants(self, id):
+	def genConstants(self, id, subId1):
 		constantsArr = ['N', self.N,
 					'twiddleBits', self.twiddleBits,
 					'twiddleDelay', self.twiddleDelay,
+					'dataBitsIntern', id + 'dataBits + ' + str(self.bfBitGrowth),
+					'dataBitsOut', id + 'dataBits + ' + str(self.bitGrowth),
 					'order', myLog2(self.N),
-					'delay', self.delay()]
+					'delay', self.delay(),
+					subId1 + 'dataBits', id + 'dataBitsIntern']
 		constants = ''
 		for i in xrange(0, len(constantsArr), 2):
 			name = constantsArr[i]
@@ -655,14 +689,14 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 		
 		#         0     1       2      3       4           5        6     
 		params = [id, subId1, order, sub1in, sub1delay, sub1phase, '',
-		#              7          8          9  10
-					self.N, self.multDelay, '', '',
+		#              7          8                 9              10
+					self.N, self.multDelay, str(self.bfBitGrowth), '',
 		#              11         12           13                  14
 					sub1order, sub1delay, self.spdf_delay, self.multiplier.entity
 					]
 		body = '''
 {0:s}spdfStage: entity fft_spdf_stage
-	generic map(N=>{2:d}, dataBits=>dataBits, inverse=>inverse)
+	generic map(N=>{2:d}, dataBits=>dataBits, bitGrowth=>{9:s}, inverse=>inverse)
 	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}spdfOut);
 
 {0:s}ph1 <= {0:s}phase-{13:d}+1 when rising_edge(clk);
@@ -682,8 +716,8 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 
 {0:s}twMult: entity {14:s}
 	generic map(in1Bits=>{0:s}twiddleBits+1,
-				in2Bits=>dataBits,
-				outBits=>dataBits)
+				in2Bits=>{0:s}dataBitsIntern,
+				outBits=>{0:s}dataBitsIntern)
 	port map(clk=>clk, in1=>{0:s}twData, in2=>{0:s}spdfOut, out1=>{3:s});
 
 {0:s}ph2 <= {0:s}ph1-{8:d}+1 when rising_edge(clk);
@@ -719,7 +753,7 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 			body += '''
 	
 {0:s}rb: entity reorderBuffer
-	generic map(N=>{1:d}, dataBits=>dataBits, repPeriod=>{7:d}, bitPermDelay=>0, dataPathDelay=>{6:d})
+	generic map(N=>{1:d}, dataBits=>{0:s}dataBitsIntern, repPeriod=>{7:d}, bitPermDelay=>0, dataPathDelay=>{6:d})
 	port map(clk, din=>{0:s}rbIn, phase=>{0:s}rbInPhase, dout=>{5:s}din,
 		bitPermIn=>{2:s}, bitPermCount=>{3:s}, bitPermOut=>{4:s});
 
@@ -727,15 +761,12 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 
 '''.format(*params)
 		return body
-	
-	def _genSubInst(self, instanceName, entityName, obj):
-		if obj.isStub:
-			return obj.genBody(instanceName)
-		
-		line1 = '{0:s}: entity {1:s} generic map(dataBits=>dataBits, twBits=>twBits, inverse=>inverse)'.format(instanceName, entityName)
+
+	def genStub(self, instanceName, entityName):
+		line1 = '{0:s}: entity {1:s} generic map(dataBits=>{0:s}dataBits, twBits=>twBits, inverse=>inverse)'.format(instanceName, entityName)
 		line2 = '	port map(clk=>clk, din=>{0:s}din, phase=>{0:s}phase, dout=>{0:s}dout);'.format(instanceName)
 		return line1 + '\n' + line2
-	
+
 	def genEntity(self, entityName, sub1Name):
 		code = '''
 library ieee;
@@ -780,7 +811,7 @@ architecture ar of {3:s} is
 	signal sub1phase: unsigned({5:d}-1 downto 0);
 '''.format(*params)
 		
-		code += indent(self.genConstants(''), 1)
+		code += indent(self.genConstants('', 'sub1'), 1)
 		code += '\n\t--=======================================\n\n'
 		code += indent(self.genDeclarations('', False), 1)
 		code += '''
@@ -788,7 +819,7 @@ begin
 '''
 		code += indent(self.genBody('', 'sub1'), 1)
 		code += '\n'
-		code += indent(self._genSubInst('sub1', sub1Name, self.sub1), 1)
+		code += indent(self.sub1.genStub('sub1', sub1Name), 1)
 		code += '''
 end ar;
 '''

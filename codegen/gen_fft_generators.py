@@ -17,8 +17,7 @@ def genDeclarations(fft, id, level, fnName='genDeclarations'):
 		subId1 = 'A'
 		subId2 = 'B'
 	
-	if (fnName == 'genDeclarations' or fnName == 'genBody') \
-			and not isinstance(fft, FFTBase):
+	if not fft.isBase:
 		params += [subId1 + '_', subId2 + '_']
 	
 	# call gen*
@@ -105,40 +104,50 @@ end ar;
 '''
 	return code
 
-def _collectInstances(instanceMap, instanceList, fft):
+def _collectTypes(typeMap, typeList, fft):
 	if isinstance(fft, FFTBase):
 		return
 
 	for ch in fft.children():
-		_collectInstances(instanceMap, instanceList, ch)
+		_collectTypes(typeMap, typeList, ch)
 
 	key = fft.descriptionStr()
-	if not key in instanceMap:
-		instanceMap[key] = fft
-		instanceList.append(fft)
+	if key in typeMap:
+		typeMap[key].append(fft)
+	else:
+		typeMap[key] = [fft]
+		typeList.append(key)
 
 # generate the complete code for a fft instance and its dependencies
 def genFFTSeparated(fft, entityName):
 	# collect all instances
-	instanceMap = {}
-	instanceList = [] # in topological order; dependencies come first
-	_collectInstances(instanceMap, instanceList, fft)
+	typeMap = {}
+	typeList = [] # in topological order; dependencies come first
+	_collectTypes(typeMap, typeList, fft)
 	
 	# name all instances
 	fftSizes = {}
-	for inst in instanceList:
+	for typeStr in typeList:
+		inst = typeMap[typeStr][0]
+		
+		# pick an entity name for this type
+		name = entityName + '_sub' + str(inst.N)
 		if inst.N in fftSizes:
 			fftSizes[inst.N] += 1
-			inst._name = entityName + '_sub' + str(inst.N) + '_' + str(fftSizes[inst.N])
+			name = entityName + '_sub' + str(inst.N) + '_' + str(fftSizes[inst.N])
 		else:
 			fftSizes[inst.N] = 1
-			inst._name = entityName + '_sub' + str(inst.N)
-	
+
+		# annotate all instances with the entity name
+		for inst in typeMap[typeStr]:
+			inst._name = name
+
 	fft._name = entityName
 	
 	# generate all instances
 	code = []
-	for inst in instanceList:
+	for typeStr in typeList:
+		inst = typeMap[typeStr][0]
 		names = []
 		for ch in inst.children():
 			if isinstance(ch, FFTBase):

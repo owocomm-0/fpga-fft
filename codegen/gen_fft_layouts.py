@@ -31,9 +31,11 @@ fft4_large_scale_div_sqrt_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', fft
 fft4_delay = 11
 fft4_entity = 'fft4_serial7'
 fft4_scale_none = FFTBase(4, fft4_entity, 'SCALE_NONE', fft4_delay)
+fft4_scale_none_bg1 = FFTBase(4, fft4_entity, 'SCALE_NONE', fft4_delay, bitGrowth=1)
 fft4_scale_div_sqrt_n = FFTBase(4, fft4_entity, 'SCALE_DIV_SQRT_N', fft4_delay)
 fft4_scale_div_n = FFTBase(4, fft4_entity, 'SCALE_DIV_N', fft4_delay)
 fft4_scale_none.setOutputBitOrder([1,0])
+fft4_scale_none_bg1.setOutputBitOrder([1,0])
 fft4_scale_div_sqrt_n.setOutputBitOrder([1,0])
 fft4_scale_div_n.setOutputBitOrder([1,0])
 
@@ -88,23 +90,45 @@ fft1024 = \
 			FFT4Step(16, 
 				fft4_scale_none,
 				fft4_scale_none),
-			fft4_large_scale_div_sqrt_n),
-		FFT4Step(16, 
-			fft4_scale_div_n,
-			fft4_scale_div_n));
-
-fft1024_wide = \
-	FFT4Step(1024,
-		FFT4Step(64,
-			FFT4Step(16, 
-				fft4_scale_none,
-				fft4_scale_none),
 			fft4_scale_div_sqrt_n),
 		FFT4Step(16, 
 			fft4_scale_div_n,
 			fft4_scale_div_n));
 
+
+# max value: 216181722
+# max error: 43.2 LSB, rms error 10.2 LSB
+
+# max value: 926493094
+# max error: 181.9 LSB, rms error 43.5 LSB
+
+fft1024_wide = \
+	FFT4Step(1024,
+		FFT4Step(64,
+			FFT4Step(16, 
+				fft4_scale_none_bg1,
+				fft4_scale_none_bg1),
+			fft4_scale_div_sqrt_n),
+		FFT4Step(16, 
+			fft4_scale_div_sqrt_n,
+			fft4_scale_div_sqrt_n));
 fft1024_wide.setMultiplier(largeMult)
+
+
+fft1024_wide_unscaled = \
+	FFT4Step(1024,
+		FFT4Step(64,
+			FFT4Step(16, 
+				fft4_scale_none,
+				fft4_scale_none),
+			fft4_scale_none),
+		FFT4Step(16, 
+			fft4_scale_none,
+			fft4_scale_none));
+fft1024_wide_unscaled.setMultiplier(largeMult)
+
+
+
 
 fft1024_2 = \
 	FFT4Step(1024,
@@ -120,8 +144,10 @@ fft1024_2 = \
 
 fft1024_spdf_wide = \
 	FFTSPDF(1024,
-		FFTSPDF(256,
-			FFT4Step(64,
+		bfBitGrowth=1,
+		sub1=FFTSPDF(256,
+			bfBitGrowth=1,
+			sub1=FFT4Step(64,
 				FFT4Step(16, 
 					fft4_scale_div_sqrt_n,
 					fft4_scale_div_n),

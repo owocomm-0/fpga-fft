@@ -10,7 +10,7 @@ use work.fft_spdf_halfstage;
 -- N should be set to the log2 of the whole frame length. 
 -- total delay is fft_spdf_halfstage_delay(N, false) + fft_spdf_halfstage_delay(N, true)
 entity fft_spdf_stage is
-	generic(N, dataBits: integer;
+	generic(N, dataBits, bitGrowth: integer;
 			inverse: boolean := true);
 	port(clk: in std_logic;
 		din: in complex;
@@ -23,13 +23,13 @@ architecture a of fft_spdf_stage is
 	signal tmp: complex;
 begin
 	s1: entity fft_spdf_halfstage
-		generic map(N=>N, dataBits=>dataBits, butterfly2=>false, inverse=>inverse)
+		generic map(N=>N, dataBits=>dataBits+bitGrowth, butterfly2=>false, inverse=>inverse)
 		port map(clk=>clk, din=>din, phase=>phase, dout=>tmp);
 	
 	ph1 <= phase - fft_spdf_halfstage_delay(N, false);
 	
 	s2: entity fft_spdf_halfstage
-		generic map(N=>N, dataBits=>dataBits, butterfly2=>true, inverse=>inverse)
+		generic map(N=>N, dataBits=>dataBits+bitGrowth, butterfly2=>true, inverse=>inverse)
 		port map(clk=>clk, din=>tmp, phase=>ph1, dout=>dout);
 end a;
 

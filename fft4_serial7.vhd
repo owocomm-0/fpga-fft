@@ -9,6 +9,7 @@ use work.fft4_serial6_bf;
 -- data input is in natural order and output is in bit reversed order
 entity fft4_serial7 is
 	generic(dataBits: integer := 18;
+			bitGrowth: integer := 0;
 			scale: scalingModes := SCALE_NONE;
 			round: boolean := true;
 			inverse: boolean := true);
@@ -94,5 +95,5 @@ g2: if not inverse generate
 		generic map(dataBits=>dataBits+2, carryPosition=>shift-1)
 		port map(clk=>clk, din=>bfIn, roundIn=>bfRound, dout=>bfOut0);
 	
-	dout <= keepNBits(shift_right(dout0, shift), dataBits) when rising_edge(clk);
+	dout <= keepNBits(shift_right(dout0, shift), dataBits + bitGrowth) when rising_edge(clk);
 end ar;

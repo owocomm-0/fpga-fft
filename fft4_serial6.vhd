@@ -19,25 +19,39 @@ end entity;
 
 architecture a of fft4_serial6_bf is
 	signal roundIn1: std_logic;
-	signal carry1, carry2: signed(carryPosition+1 downto 0);
-	signal a,b,b1: complexArray(1 downto 0);
-	signal c1, c2, cA, cB: complex;
+	signal carry1, carry2, cA, cB, cA1, cB1: signed(carryPosition+1 downto 0);
+	signal a,b,aPlusB,aMinusB: complex;
+	signal carrySelA, carrySelB: std_logic;
+	signal carryAddA, carryAddB: complex := to_complex(0,0);
 begin
-	a <= din when rising_edge(clk);
+	a <= din(0) when rising_edge(clk);
+	b <= din(1) when rising_edge(clk);
 	roundIn1 <= roundIn when rising_edge(clk);
 
-g1: if carryPosition = -1 generate
-		cA <= to_complex(0,0);
-		cB <= to_complex(0,0);
+	-- set up carry signals for rounding
+	-- carry1 rounds with + bias, and carry2 rounds with - bias
+g1: if carryPosition = 0 generate
+		carry1 <= "01";
+		carry2 <= "00";
 	end generate;
-g2: if carryPosition >= 0 generate
-		carry1 <= "0" & roundIn & (carryPosition-1 downto 0=>'0');
-		carry2 <= "00" & (carryPosition-1 downto 0=>roundIn);
-		c1 <= to_complex(carry1, carry1) when rising_edge(clk);
-		c2 <= to_complex(carry2, carry2) when rising_edge(clk);
-		cA <= c1 when a(0).re(carryPosition+1)='1' else c2;
-		--cB <= c1 when b(0).re(carryPosition+1)='0' else c2;
-		cB <= cA;
+g2: if carryPosition > 0 generate
+		carry1 <= "01" & (carryPosition-1 downto 0=>'0');
+		carry2 <= "00" & (carryPosition-1 downto 0=>'1');
+	end generate;
+
+	-- select carry signal based on input
+g4: if carryPosition >= 0 generate
+		carrySelA <= a.re(carryPosition+1); -- when rising_edge(clk);
+		carrySelB <= b.re(carryPosition+1); -- when rising_edge(clk);
+		cA <= carry1 when carrySelA='1' else carry2;
+		cB <= carry1 when carrySelB='0' else carry2;
+		--cB <= cA;
+
+		cA1 <= cA and (cA'range=>roundIn);
+		cB1 <= cB and (cB'range=>roundIn);
+
+		carryAddA <= to_complex(cA1, cA1) when rising_edge(clk);
+		carryAddB <= to_complex(cB1, cB1) when rising_edge(clk);
 	end generate;
 --g2: if carryPosition = 0 generate
 --		c <= to_complex(1, 1) when roundIn1='1' else
@@ -46,14 +60,14 @@ g2: if carryPosition >= 0 generate
 --g3: if carryPosition = 1 generate
 --	end generate;
 	
-	--b(0) <= round_convergent(a(0) + a(1), roundIn1, carryPosition);
-	--b(1) <= round_convergent(a(0) - a(1), roundIn1, carryPosition);
-	
-	b(0) <= a(0) + a(1) + cA;
-	b(1) <= a(0) - a(1) + cB;
-	
-	dout(0) <= keepNBits(b(0), dataBits);
-	dout(1) <= keepNBits(b(1), dataBits);
+	--aPlusB <= round_convergent(a + b, roundIn1, carryPosition);
+	--aMinusB <= round_convergent(a - b, roundIn1, carryPosition);
+
+	aPlusB <= a + b + carryAddA;
+	aMinusB <= a - b + carryAddB;
+
+	dout(0) <= keepNBits(aPlusB, dataBits);
+	dout(1) <= keepNBits(aMinusB, dataBits);
 end a;
 
 

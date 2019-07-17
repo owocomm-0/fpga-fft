@@ -301,3 +301,149 @@ end ar;
 '''.format(*params)
 	return code
 
+
+
+# generate a large fft core (twiddle multiply followed by fft)
+def genLargeFFT(fft, burstWidth, entityName, fftName):
+	colBits = myLog2(fft.N)
+	rowBits = myLog2(burstWidth)
+	breorderBits = rowBits*2
+	reorderBits = colBits + rowBits
+	totalBits = colBits*2
+	burstLength = burstWidth*burstWidth
+	multiplier = fft.multiplier
+	twXR = bitOrderToVHDL(fft.inputBitOrder(), 'twX')
+	multitplierEntity = multiplier.entity
+
+	breorderDelay = burstLength
+	reorderDelay = fft.N * burstWidth
+	twiddleDelay = 3 + 11
+	twMultDelay = multiplier.delay()
+	fftDelay = fft.delay()
+	delay = 1 + breorderDelay + reorderDelay + twMultDelay + fft.delay() + reorderDelay + breorderDelay
+
+	code = '''
+library ieee;
+library work;
+use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use work.fft_types.all;
+use work.{0:s};
+use work.{0:s}_ireorderer{1:d};
+use work.{0:s}_oreorderer{1:d};
+use work.transposer;
+use work.twiddleGenerator1M;
+use work.{2:s};
+'''.format(fftName, burstWidth, multitplierEntity)
+
+	code += '''
+-- delay is {delay:d}
+entity {entityName:s} is
+	generic(dataBits: integer := 24; twBits: integer := 12);
+	port(clk: in std_logic;
+		din: in complex;
+		phase: in unsigned({totalBits:d}-1 downto 0);
+		twMultEnable, inTranspose, outTranspose: in std_logic;
+		dout: out complex);
+end entity;
+architecture ar of {entityName:s} is
+	signal din1: complex;
+	signal ibreorder_dout, twMult_dout, ireorder_dout, core_dout, oreorder_dout, obreorder_dout, twOut: complex;
+	signal ibreorder_phase, tw_phase, ireorder_phase, core_phase, oreorder_phase, obreorder_phase: unsigned({totalBits:d}-1 downto 0);
+	signal tw_phase0, tw_phase1: unsigned({totalBits:d}-1 downto 0);
+	signal twX, twY, twX1, twY1: unsigned({colBits:d}-1 downto 0);
+	signal twFineY, twFineY1: unsigned({rowBits:d}-1 downto 0);
+	signal twAddr, twAddr0: unsigned({totalBits:d}-1 downto 0);
+	signal twIA, twIANext, twIB, twIBNext: unsigned({totalBits:d}-1 downto 0);
+
+	signal twMultEnable_latch, inTranspose_latch, outTranspose_latch: boolean;
+	signal twMultEnable1,inTranspose1,outTranspose1: std_logic;
+
+	constant twDelay: integer := {twiddleDelay:d};
+begin
+	twMultEnable1 <= twMultEnable when rising_edge(clk);
+	din1 <= din when rising_edge(clk);
+	inTranspose1 <= not inTranspose when rising_edge(clk);
+	outTranspose1 <= not outTranspose when rising_edge(clk);
+
+	ibreorder_phase <= phase when rising_edge(clk);
+	tw_phase <= ibreorder_phase - {breorderDelay:d} + 1 when rising_edge(clk);
+	ireorder_phase <= tw_phase - {twMultDelay:d} + 1 when rising_edge(clk);
+	core_phase <= ireorder_phase - {reorderDelay:d} + 1 when rising_edge(clk);
+	oreorder_phase <= core_phase - {fftDelay:d} + 1 when rising_edge(clk);
+	obreorder_phase <= core_phase - {reorderDelay:d} + 1 when rising_edge(clk);
+
+
+	ibreorder: entity transposer
+		generic map(N1=>{rowBits:d}, N2=>{rowBits:d}, dataBits=>dataBits)
+		port map(clk=>clk,
+				phase=>ibreorder_phase({breorderBits:d}-1 downto 0),
+				din=>din1,
+				reorderEnable=>inTranspose1,
+				dout=>ibreorder_dout);
+
+
+
+	tw_phase0 <= phase - {breorderDelay:d} + twDelay;
+	tw_phase1 <= tw_phase0 when rising_edge(clk);
+
+	-- twX is the column number
+	-- twY is the row number rounded down to a multiple of burstWidth
+	-- twFineY is the row number mod burstWidth
+	twX <= tw_phase1({colBits:d}+{rowBits:d}-1 downto {rowBits:d});
+	twY <= tw_phase1(tw_phase1'left downto {colBits:d}+{rowBits:d}) & ({rowBits:d}-1 downto 0=>'0');
+	twFineY <= tw_phase1({rowBits:d}-1 downto 0);
+
+	twIANext <= (others=>'0') when twX=0 else twIA+twY;
+	twIA <= twIANext when twFineY=0 and rising_edge(clk);
+
+	twFineY1 <= twFineY when rising_edge(clk);
+	twX1 <= twX when rising_edge(clk);
+	twY1 <= twY when rising_edge(clk);
+	-- twIA is twX1*twY1
+
+	twIBNext <= twIA when twFineY1=0 else twIB+twX1;
+	twIB <= twIBNext when rising_edge(clk);
+	twAddr0 <= twIB when twMultEnable1='1' else
+				to_unsigned(0, twAddr'length);
+	twAddr <= twAddr0 when rising_edge(clk);
+
+	tw: entity twiddleGenerator1M
+		generic map(twiddleBits=>twBits)
+		port map(clk=>clk, rdAddr=>twAddr, rdData=>twOut);
+
+	twMult: entity {multitplierEntity:s}
+		generic map(in1Bits=>twBits+1, in2Bits=>dataBits, outBits=>dataBits)
+		port map(clk=>clk, in1=>twOut, in2=>ibreorder_dout, out1=>twMult_dout);
+
+	ireorder: entity {fftName:s}_ireorderer{burstWidth:d}
+		generic map(dataBits=>dataBits)
+		port map(clk=>clk,
+				phase=>ireorder_phase({reorderBits:d}-1 downto 0),
+				din=>twMult_dout,
+				dout=>ireorder_dout);
+
+	core: entity {fftName:s}
+		generic map(dataBits=>dataBits, twBits=>twBits)
+		port map(clk=>clk,
+				phase=>core_phase({colBits:d}-1 downto 0),
+				din=>ireorder_dout, dout=>core_dout);
+
+	oreorder: entity {fftName:s}_oreorderer{burstWidth:d}
+		generic map(dataBits=>dataBits)
+		port map(clk=>clk,
+				phase=>oreorder_phase({reorderBits:d}-1 downto 0),
+				din=>core_dout, dout=>oreorder_dout);
+
+	obreorder: entity transposer
+		generic map(N1=>{rowBits:d}, N2=>{rowBits:d}, dataBits=>dataBits)
+		port map(clk=>clk,
+				phase=>obreorder_phase({breorderBits:d}-1 downto 0),
+				din=>oreorder_dout,
+				reorderEnable=>outTranspose1,
+				dout=>obreorder_dout);
+	dout <= obreorder_dout;
+end ar;
+'''.format(**locals())
+	return code
+

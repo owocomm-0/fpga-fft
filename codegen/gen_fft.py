@@ -41,7 +41,7 @@ from gen_fft_layouts import *
 #print genVHDL(fft16k)
 
 if len(sys.argv) < 3:
-	print 'usage: %s [fft|reorderer|wrapper] INSTANCE_TO_GENERATE' % sys.argv[0]
+	print 'usage: %s [fft|reorderer|wrapper|large] INSTANCE_TO_GENERATE' % sys.argv[0]
 	print 'see gen_fft_layouts.py for a list of instances or to add your own instance'
 	exit(1)
 
@@ -79,4 +79,8 @@ if outpType == 'reorderer':
 if outpType == 'wrapper':
 	for rows in [1,2,4]:
 		print genReordererWrapper(instance, rows, instanceName + '_wrapper' + str(rows), instanceName)
+
+if outpType == 'large':
+	for rows in [2,4]:
+		print genLargeFFT(instance, rows, instanceName + '_large' + str(rows), instanceName)
 

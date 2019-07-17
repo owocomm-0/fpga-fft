@@ -33,8 +33,9 @@ architecture ar of fft4_serial3 is
 	signal fftIn_mCycle_reordered, fftOut_mCycle_0_reordered: complexArray(3 downto 0);
 	signal shiftOut,shiftOutNext: complexArray(3 downto 0);
 begin
+	ph1 <= phase when rising_edge(clk);
 	shiftIn <= din & shiftIn(3 downto 1) when rising_edge(clk);
-	fftIn_mCycle <= shiftIn when phase=0 and rising_edge(clk);
+	fftIn_mCycle <= shiftIn when ph1=3 and rising_edge(clk);
 	-- 5 cycle
 	
 g1: if bitReversedOrder generate
@@ -55,16 +56,16 @@ g2: if not bitReversedOrder generate
 	fft1: entity fft4_noPipeline
 		generic map(dataBits=>dataBits, scale=>scale, round=>round)
 		port map(fftIn_mCycle_reordered, fftOut_mCycle_0_reordered);
-	fftOut_mCycle <= fftOut_mCycle_0 when phase=0 and rising_edge(clk);
+	fftOut_mCycle <= fftOut_mCycle_0 when ph1=3 and rising_edge(clk);
 	-- 9 cycles
 	
 	--shiftOutNext <= fftOut_mCycle when phase=1 else
 	--				to_complex(0,0) & shiftOut(3 downto 1);
 	--shiftOut <= shiftOutNext when rising_edge(clk);
 	
-	shiftOut(0) <= fftOut_mCycle(0) when phase=1 else
-					fftOut_mCycle(1) when phase=2 else
-					fftOut_mCycle(2) when phase=3 else
+	shiftOut(0) <= fftOut_mCycle(0) when ph1=0 else
+					fftOut_mCycle(1) when ph1=1 else
+					fftOut_mCycle(2) when ph1=2 else
 					fftOut_mCycle(3);
 	-- 9 cycles
 	

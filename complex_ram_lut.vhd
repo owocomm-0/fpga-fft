@@ -40,11 +40,11 @@ architecture a of complexRamLUT is
 	attribute ram_style of ram1: signal is "distributed";
 begin
 	--inferred ram
-	rdaddr1 <= rdaddr;
+	rdaddr1 <= rdaddr when rising_edge(rdclk);
 	
 	-- TODO: we are assuming this infers a register on the address side (rather than output side);
 	-- this is true on xilinx but we should verify it on other vendor tools as well.
-	tmpdata <= ram1(to_integer(rdaddr1)) when rising_edge(rdclk);
+	tmpdata <= ram1(to_integer(rdaddr1));
 	
 	tmpdata1 <= signed(tmpdata(dataBits-1 downto 0)) when rising_edge(rdclk);
 	tmpdata2 <= signed(tmpdata(width-1 downto dataBits)) when rising_edge(rdclk);

@@ -7,6 +7,11 @@ if len(sys.argv) < 3:
 	exit(1)
 
 N = int(sys.argv[1]);
+
+# this twiddle generator is the minor part of a size M twiddle genenerator;
+# currently M = N * (4N)
+M = N * (N*4)
+
 twiddleBits = int(sys.argv[2]);
 
 reducedBits = False;
@@ -56,7 +61,7 @@ begin
 	twData <= to_complex(signed(data1(twiddleBits-1 downto 0)), signed(data1(data1'left downto twiddleBits)));
 	rom <= ('''.format(depthOrder, twiddleBits, name)
 
-fullScale = N*N
+fullScale = M
 for i in xrange(N):
 	x = float(i)/fullScale * (2*pi)
 	

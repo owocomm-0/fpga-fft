@@ -106,12 +106,12 @@ fft1024_wide = \
 	FFT4Step(1024,
 		FFT4Step(64,
 			FFT4Step(16, 
-				fft4_scale_none_bg1,
-				fft4_scale_none_bg1),
+				fft4_scale_none,
+				fft4_scale_none),
 			fft4_scale_div_sqrt_n),
 		FFT4Step(16, 
-			fft4_scale_div_sqrt_n,
-			fft4_scale_div_sqrt_n));
+			fft4_scale_div_n,
+			fft4_scale_div_n));
 fft1024_wide.setMultiplier(largeMult)
 
 

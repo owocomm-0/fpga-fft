@@ -28,6 +28,15 @@ def recursiveCall(obj, fn, *args, **kwargs):
 		func(*args, **kwargs)
 
 
+def twiddleRomSimpleDelay(size):
+	return 2
+
+def twiddleRomDelay(size):
+	return 2
+
+def twiddleGeneratorDelay(size):
+	return 5
+
 class BitPermutation:
 	def __init__(self, bitOrder):
 		self.bitOrder = bitOrder
@@ -226,11 +235,11 @@ class FFT4Step:
 
 		if N > 32:
 			self.simpleTwiddleRom = False
-			self.twiddleDelay = 7
+			self.twiddleDelay = twiddleGeneratorDelay(N) + twiddleRomDelay(N)
 			self.imports.extend(['twiddleGenerator', 'twiddleRom%d' % N])
 		else:
 			self.simpleTwiddleRom = True
-			self.twiddleDelay = 2
+			self.twiddleDelay = twiddleRomSimpleDelay(N)
 			self.imports.append('twiddleGenerator%d' % N)
 		
 		if not bitOrderIsNatural(sub2.inputBitOrder()):
@@ -548,12 +557,12 @@ class FFTSPDF:
 		
 		if N > 32:
 			self.simpleTwiddleRom = False
-			self.twiddleDelay = 7
+			self.twiddleDelay = twiddleGeneratorDelay(N) + twiddleRomDelay(N)
 			self.imports.append('twiddleRom%d' % N)
 			self.imports.append('twiddleGenerator')
 		else:
 			self.simpleTwiddleRom = True
-			self.twiddleDelay = 2
+			self.twiddleDelay = twiddleRomSimpleDelay(N)
 			self.imports.append('twiddleGenerator%d' % N)
 		
 		if not bitOrderIsNatural(sub1.inputBitOrder()):

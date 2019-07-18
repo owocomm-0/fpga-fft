@@ -1,10 +1,11 @@
 #!/bin/bash
 
 NAME="$1"
-OUTDIR="../generated"
+OUTDIR="../generated/$NAME"
 
-./gen_fft.py fft "$NAME" > "$OUTDIR"/"$NAME".vhd
-./gen_fft.py reorderer "$NAME" > "$OUTDIR"/"$NAME"_reorderer.vhd
-./gen_fft.py wrapper "$NAME" > "$OUTDIR"/"$NAME"_wrapper.vhd
-./gen_fft.py large "$NAME" > "$OUTDIR"/"$NAME"_large.vhd
+mkdir -p "$OUTDIR"
+./gen_fft.py fft "$NAME" "$OUTDIR"
+./gen_fft.py reorderer "$NAME" "$OUTDIR"
+./gen_fft.py wrapper "$NAME" "$OUTDIR"
+./gen_fft.py large "$NAME" "$OUTDIR"
 

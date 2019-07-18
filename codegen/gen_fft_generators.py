@@ -7,6 +7,7 @@ import sys,random
 # imports from local directory
 from gen_fft_utils import *
 from gen_fft_modules import *
+from gen_fft_large import *
 
 
 def genDeclarations(fft, id, level, fnName='genDeclarations'):
@@ -117,6 +118,7 @@ def _collectTypes(typeMap, typeList, fft):
 		typeList.append(key)
 
 # generate the complete code for a fft instance and its dependencies
+# returns list of tuple (filename, codeStr)
 def genFFTSeparated(fft, entityName):
 	# collect all instances
 	typeMap = {}
@@ -152,10 +154,9 @@ def genFFTSeparated(fft, entityName):
 				names.append(ch.entity)
 			else:
 				names.append(ch._name)
+		code.append([inst._name + '.vhd', inst.genEntity(inst._name, *names)])
 
-		code.append(inst.genEntity(inst._name, *names))
-	
-	return '\n\n'.join(code)
+	return code
 
 # generate a input/output reorderer for converting between natural order
 # and fft order, with `rows` interleaved channels
@@ -305,169 +306,102 @@ end ar;
 
 # generate a large fft core (twiddle multiply followed by fft)
 def genLargeFFT(fft, burstWidth, entityName, fftName):
-	colBits = myLog2(fft.N)
-	rowBits = myLog2(burstWidth)
-	breorderBits = rowBits*2
-	reorderBits = colBits + rowBits
-	totalBits = colBits*2
-	burstLength = burstWidth*burstWidth
-	multiplier = fft.multiplier
-	twXR = bitOrderToVHDL(fft.inputBitOrder(), 'twX')
-	multiplierEntity = multiplier.entity
+	inst = FFTLarge(fft, burstWidth)
+	return inst.genEntity(entityName, fftName)
 
-	# twiddle generator is divided into two parts
-	twUpperBits = colBits+1
-	twLowerBits = colBits-1
-	twUpperSize = 2**twUpperBits
-	twLowerSize = 2**twLowerBits
 
-	breorderDelay = burstLength
-	reorderDelay = fft.N * burstWidth
-	twMultDelay = multiplier.delay()
-	fftDelay = fft.delay()
-
-	# assume twUpperDelay >= twLowerDelay
-	twUpperDelay = twiddleGeneratorDelay(twUpperSize) + twiddleRomDelay(twUpperSize)
-	twLowerDelay = twiddleRomDelay(twLowerSize)
-	assert twUpperDelay >= twLowerDelay
-	twiddleDelay = twUpperDelay + multiplier.delay()
-	twiddleDelayDiff = twUpperDelay - twLowerDelay
-
-	delay = 1 + breorderDelay + reorderDelay + twMultDelay + fft.delay() + reorderDelay + breorderDelay
-
+# generate a AXI stream wrapper for a large FFT
+def genAXIWrapper(fft, burstWidth, entityName, largeFFTName):
+	inst = FFTLarge(fft, burstWidth)
+	N = fft.N**2
+	totalBits = myLog2(N)
+	delay = inst.delay()
 	code = '''
 library ieee;
 library work;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 use work.fft_types.all;
-use work.{fftName:s};
-use work.{fftName:s}_ireorderer{burstWidth:d};
-use work.{fftName:s}_oreorderer{burstWidth:d};
-use work.sr_unsigned;
-use work.transposer;
-use work.twiddleAddrGenLarge;
-use work.twiddleGenerator;
-use work.twiddleRom{twUpperSize:d};
-use work.twiddleGeneratorPartial{twLowerSize:d};
-use work.{multiplierEntity:s};
+use work.clockGating;
+use work.axiBlockProcessorAdapter2;
+use work.{largeFFTName:s};
 
--- delay is {delay:d}
 entity {entityName:s} is
-	generic(dataBits: integer := 24; twBits: integer := 12);
-	port(clk: in std_logic;
-		din: in complex;
-		phase: in unsigned({totalBits:d}-1 downto 0);
-		twMultEnable, inTranspose, outTranspose: in std_logic;
-		dout: out complex);
+	generic(dataBits: integer := 32; twBits: integer := 24);
+	port(aclk, aclk_unbuffered, reset: in std_logic;
+		din_tvalid: in std_logic;
+		din_tready: out std_logic;
+		din_tdata: in std_logic_vector(dataBits*2-1 downto 0);
+
+		dout_tvalid: out std_logic;
+		dout_tready: in std_logic;
+		dout_tdata: out std_logic_vector(dataBits*2-1 downto 0);
+
+		inFlags, outFlags: in std_logic_vector(3 downto 0));
 end entity;
 architecture ar of {entityName:s} is
-	signal din1: complex;
-	signal ibreorder_dout, twMult_dout, ireorder_dout, core_dout, oreorder_dout, obreorder_dout, twOut: complex;
-	signal ibreorder_phase, tw_phase, ireorder_phase, core_phase, oreorder_phase, obreorder_phase: unsigned({totalBits:d}-1 downto 0);
-	signal twX, twY, twX1, twY1: unsigned({colBits:d}-1 downto 0);
-	signal twFineY, twFineY1: unsigned({rowBits:d}-1 downto 0);
-	signal twIA, twIANext, twIB, twIBNext: unsigned({totalBits:d}-1 downto 0);
-	signal twAddr, twAddr0: unsigned({totalBits:d}-1 downto 0);
+	attribute X_INTERFACE_INFO : string;
+	attribute X_INTERFACE_PARAMETER : string;
+	attribute X_INTERFACE_INFO of aclk : signal is "xilinx.com:signal:clock:1.0 signal_clock CLK";
+	attribute X_INTERFACE_INFO of aclk_unbuffered : signal is "xilinx.com:signal:clock:1.0 signal_clock CLK";
+	attribute X_INTERFACE_PARAMETER of aclk: signal is "ASSOCIATED_BUSIF din:dout:inFlags:outFlags";
 
-	signal twAddrUpper: unsigned({twUpperBits:d}-1 downto 0);
-	signal twAddrLower, twAddrLower0: unsigned({twLowerBits:d}-1 downto 0);
-	signal twDataLower, twDataUpper: complex;
-
-	signal romAddrUpper: unsigned({twUpperBits:d}-4 downto 0);
-	signal romDataUpper: std_logic_vector(twBits*2-3 downto 0);
-
-	signal twMultEnable_latch, inTranspose_latch, outTranspose_latch: boolean;
-	signal twMultEnable1,inTranspose1,outTranspose1: std_logic;
-
-	constant twDelay: integer := {twiddleDelay:d};
+	constant largeOrder: integer := {totalBits:d};
+	signal fftClk_gated: std_logic;
+	signal bp_ce, bp_ostrobe: std_logic;
+	signal inFlags1: std_logic_vector(3 downto 0);
+	signal bp_ce1, bp_ce2: std_logic;
+	signal bp_indata, bp_outdata, bp_indata1, bp_indata2: std_logic_vector(dataBits*2-1 downto 0);
+	signal bp_inphase, bp_inphase1, bp_inphase2, gated_inphase: unsigned(largeOrder-1 downto 0);
+	signal gated_din, gated_dout: complex;
 begin
-	twMultEnable1 <= twMultEnable when rising_edge(clk);
-	din1 <= din when rising_edge(clk);
-	inTranspose1 <= not inTranspose when rising_edge(clk);
-	outTranspose1 <= not outTranspose when rising_edge(clk);
+	adapter: entity axiBlockProcessorAdapter2
+		generic map(frameSizeOrder=>largeOrder, wordWidth=>dataBits*2, processorDelay=>{delay:d})
+		port map (
+			aclk => aclk,
+			bp_ce => bp_ce,
+			bp_indata => bp_indata,
+			bp_inphase => bp_inphase,
+			bp_ostrobe => bp_ostrobe,
+			bp_outdata => bp_outdata,
+			doFlush => '1',
+			inp_tdata => din_tdata,
+			inp_tready => din_tready,
+			inp_tvalid => din_tvalid,
+			outp_tdata => dout_tdata,
+			outp_tready => dout_tready,
+			outp_tvalid => dout_tvalid,
+			reset => reset);
 
-	ibreorder_phase <= phase when rising_edge(clk);
-	tw_phase <= ibreorder_phase - {breorderDelay:d} + 1 when rising_edge(clk);
-	ireorder_phase <= tw_phase - {twMultDelay:d} + 1 when rising_edge(clk);
-	core_phase <= ireorder_phase - {reorderDelay:d} + 1 when rising_edge(clk);
-	oreorder_phase <= core_phase - {fftDelay:d} + 1 when rising_edge(clk);
-	obreorder_phase <= core_phase - {reorderDelay:d} + 1 when rising_edge(clk);
+	bp_ce1 <= bp_ce when rising_edge(aclk);
+	bp_ce2 <= bp_ce1 when rising_edge(aclk);
+	bp_indata1 <= bp_indata when rising_edge(aclk);
+	bp_indata2 <= bp_indata1 when rising_edge(aclk);
+	bp_inphase1 <= unsigned(bp_inphase) when rising_edge(aclk);
+	bp_inphase2 <= unsigned(bp_inphase1) when rising_edge(aclk);
+	bp_ostrobe <= bp_ce2;
 
+	cg: entity clockGating
+		port map(clkInUnbuffered=>aclk_unbuffered,
+				ce=>bp_ce2,
+				clkOutGated=>fftClk_gated);
 
-	ibreorder: entity transposer
-		generic map(N1=>{rowBits:d}, N2=>{rowBits:d}, dataBits=>dataBits)
-		port map(clk=>clk,
-				phase=>ibreorder_phase({breorderBits:d}-1 downto 0),
-				din=>din1,
-				reorderEnable=>inTranspose1,
-				dout=>ibreorder_dout);
+	-- start of gated clock domain
+	gated_din <= to_complex(signed(bp_indata2(dataBits-1 downto 0)), signed(bp_indata2(dataBits*2-1 downto dataBits)));
+	gated_inphase <= bp_inphase2;
 
+	inFlags1 <= inFlags when gated_inphase=(2**(gated_inphase'length) - 20) and rising_edge(fftClk_gated);
 
-	twAddrGen: entity twiddleAddrGenLarge
-		generic map(twDelay=>twDelay-{breorderDelay:d},
-					subOrder=>{colBits:d},
-					rowsOrder=>{rowBits:d})
-		port map(clk=>clk,
-				phase=>ibreorder_phase,
-				twMultEnable=>twMultEnable1,
-				twAddr=>twAddr);
-
-	twAddrUpper <= twAddr(twAddr'left downto twAddrLower'length);
-	twAddrLower0 <= twAddr(twAddrLower'range);
-
-	-- delay twAddrLower because the upper twiddle generator has more delay
-	del_twAddrLower: entity sr_unsigned
-		generic map(len=>{twiddleDelayDiff:d}, bits=>twAddrLower'length)
-		port map(clk=>clk, din=>twAddrLower0, dout=>twAddrLower);
-
-	twUpper: entity twiddleGenerator
-		generic map(twiddleBits=>twBits, depthOrder=>twAddrUpper'length)
-		port map(clk=>clk, rdAddr=>twAddrUpper, rdData=>twDataUpper,
-				romAddr=>romAddrUpper, romData=>romDataUpper);
-	romUpper: entity twiddleRom{twUpperSize:d}
-		port map(clk=>clk, romAddr=>romAddrUpper, romData=>romDataUpper);
-
-	twLower: entity twiddleGeneratorPartial{twLowerSize:d}
-		port map(clk=>clk, twAddr=>twAddrLower, twData=>twDataLower);
-
-	twGenMult: entity {multiplierEntity:s}
-		generic map(in1Bits=>twBits+1, in2Bits=>twBits+1,
-					outBits=>twBits+1, round=>true)
-		port map(clk=>clk, in1=>twDataUpper, in2=>twDataLower, out1=>twOut);
-
-
-	twMult: entity {multiplierEntity:s}
-		generic map(in1Bits=>twBits+1, in2Bits=>dataBits, outBits=>dataBits)
-		port map(clk=>clk, in1=>twOut, in2=>ibreorder_dout, out1=>twMult_dout);
-
-	ireorder: entity {fftName:s}_ireorderer{burstWidth:d}
-		generic map(dataBits=>dataBits)
-		port map(clk=>clk,
-				phase=>ireorder_phase({reorderBits:d}-1 downto 0),
-				din=>twMult_dout,
-				dout=>ireorder_dout);
-
-	core: entity {fftName:s}
+	fft: entity {largeFFTName:s}
 		generic map(dataBits=>dataBits, twBits=>twBits)
-		port map(clk=>clk,
-				phase=>core_phase({colBits:d}-1 downto 0),
-				din=>ireorder_dout, dout=>core_dout);
+		port map(clk=>fftClk_gated, din=>gated_din,
+				twMultEnable=>inFlags1(2),
+				inTranspose=>'0', outTranspose=>'1',
+				phase=>gated_inphase,
+				dout=>gated_dout);
 
-	oreorder: entity {fftName:s}_oreorderer{burstWidth:d}
-		generic map(dataBits=>dataBits)
-		port map(clk=>clk,
-				phase=>oreorder_phase({reorderBits:d}-1 downto 0),
-				din=>core_dout, dout=>oreorder_dout);
-
-	obreorder: entity transposer
-		generic map(N1=>{rowBits:d}, N2=>{rowBits:d}, dataBits=>dataBits)
-		port map(clk=>clk,
-				phase=>obreorder_phase({breorderBits:d}-1 downto 0),
-				din=>oreorder_dout,
-				reorderEnable=>outTranspose1,
-				dout=>obreorder_dout);
-	dout <= obreorder_dout;
+	bp_outdata <= std_logic_vector(resize(gated_dout.im, dataBits)) &
+					std_logic_vector(resize(gated_dout.re, dataBits));
 end ar;
 '''.format(**locals())
 	return code

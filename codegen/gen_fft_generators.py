@@ -330,7 +330,7 @@ def genLargeFFT(fft, burstWidth, entityName, fftName):
 	twUpperDelay = twiddleGeneratorDelay(twUpperSize) + twiddleRomDelay(twUpperSize)
 	twLowerDelay = twiddleRomDelay(twLowerSize)
 	assert twUpperDelay >= twLowerDelay
-	twiddleDelay = 3 + twUpperDelay + multiplier.delay()
+	twiddleDelay = twUpperDelay + multiplier.delay()
 	twiddleDelayDiff = twUpperDelay - twLowerDelay
 
 	delay = 1 + breorderDelay + reorderDelay + twMultDelay + fft.delay() + reorderDelay + breorderDelay
@@ -346,6 +346,7 @@ use work.{fftName:s}_ireorderer{burstWidth:d};
 use work.{fftName:s}_oreorderer{burstWidth:d};
 use work.sr_unsigned;
 use work.transposer;
+use work.twiddleAddrGenLarge;
 use work.twiddleGenerator;
 use work.twiddleRom{twUpperSize:d};
 use work.twiddleGeneratorPartial{twLowerSize:d};
@@ -364,7 +365,6 @@ architecture ar of {entityName:s} is
 	signal din1: complex;
 	signal ibreorder_dout, twMult_dout, ireorder_dout, core_dout, oreorder_dout, obreorder_dout, twOut: complex;
 	signal ibreorder_phase, tw_phase, ireorder_phase, core_phase, oreorder_phase, obreorder_phase: unsigned({totalBits:d}-1 downto 0);
-	signal tw_phase0, tw_phase1: unsigned({totalBits:d}-1 downto 0);
 	signal twX, twY, twX1, twY1: unsigned({colBits:d}-1 downto 0);
 	signal twFineY, twFineY1: unsigned({rowBits:d}-1 downto 0);
 	signal twIA, twIANext, twIB, twIBNext: unsigned({totalBits:d}-1 downto 0);
@@ -404,31 +404,14 @@ begin
 				dout=>ibreorder_dout);
 
 
-
-	tw_phase0 <= phase - {breorderDelay:d} + twDelay;
-	tw_phase1 <= tw_phase0 when rising_edge(clk);
-
-	-- twX is the column number
-	-- twY is the row number rounded down to a multiple of burstWidth
-	-- twFineY is the row number mod burstWidth
-	twX <= tw_phase1({colBits:d}+{rowBits:d}-1 downto {rowBits:d});
-	twY <= tw_phase1(tw_phase1'left downto {colBits:d}+{rowBits:d}) & ({rowBits:d}-1 downto 0=>'0');
-	twFineY <= tw_phase1({rowBits:d}-1 downto 0);
-
-	twIANext <= (others=>'0') when twX=0 else twIA+twY;
-	twIA <= twIANext when twFineY=0 and rising_edge(clk);
-
-	twFineY1 <= twFineY when rising_edge(clk);
-	twX1 <= twX when rising_edge(clk);
-	twY1 <= twY when rising_edge(clk);
-	-- twIA is twX1*twY1
-
-	twIBNext <= twIA when twFineY1=0 else twIB+twX1;
-	twIB <= twIBNext when rising_edge(clk);
-	twAddr0 <= twIB when twMultEnable1='1' else
-				to_unsigned(0, twAddr'length);
-	twAddr <= twAddr0 when rising_edge(clk);
-
+	twAddrGen: entity twiddleAddrGenLarge
+		generic map(twDelay=>twDelay-{breorderDelay:d},
+					subOrder=>{colBits:d},
+					rowsOrder=>{rowBits:d})
+		port map(clk=>clk,
+				phase=>ibreorder_phase,
+				twMultEnable=>twMultEnable1,
+				twAddr=>twAddr);
 
 	twAddrUpper <= twAddr(twAddr'left downto twAddrLower'length);
 	twAddrLower0 <= twAddr(twAddrLower'range);

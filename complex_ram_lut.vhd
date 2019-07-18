@@ -6,7 +6,15 @@ use work.fft_types.all;
 
 -- read delay is 2 cycles
 -- same as complexRam, but with attributes to suggest LUTRAM implementation
-entity complexRamLUT is
+
+-- FIXME: vivado has a bug where if these conditions are true:
+-- * a conditional generate block instantiates an entity
+-- * the entity's name has upper case characters
+-- * the conditional block is inactive (condition false)
+-- ...then the module hierarchy will include an "unresolved reference"
+-- preventing modules from being used in block design.
+-- Using all lowercase in the entity declaration fixes it.
+entity complexramlut is
 	generic(dataBits: integer := 8;
 				-- real depth is 2^depth_order
 				depthOrder: integer := 9);

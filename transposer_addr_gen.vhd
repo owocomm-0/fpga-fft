@@ -6,7 +6,7 @@ use work.fft_types.all;
 --use work.barrelShifter;
 
 -- phase should be 0,1,2,3,4,5,6,... up to (2**N1)*(2**N2)-1
-entity transposer_addrGen is
+entity transposer_addrgen is
 	generic(N1,N2: integer; -- N1 is the major size and N2 the minor size (input perspective)
 			-- when phaseAdvance is 0, addr always corresponds to phase in the same clock cycle
 			-- when phaseAdvance > 0, addr corresponds to phase+phaseAdvance

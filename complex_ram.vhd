@@ -5,7 +5,7 @@ use ieee.std_logic_1164.all;
 use work.fft_types.all;
 
 -- read delay is 2 cycles
-entity complexRam is
+entity complexram is
 	generic(dataBits: integer := 8;
 				-- real depth is 2^depth_order
 				depthOrder: integer := 9);

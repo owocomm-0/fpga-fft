@@ -346,6 +346,13 @@ architecture ar of {entityName:s} is
 	attribute X_INTERFACE_INFO of aclk_unbuffered : signal is "xilinx.com:signal:clock:1.0 signal_clock CLK";
 	attribute X_INTERFACE_PARAMETER of aclk: signal is "ASSOCIATED_BUSIF din:dout:inFlags:outFlags";
 
+	attribute X_INTERFACE_INFO of din_tvalid: signal is "xilinx.com:interface:axis_rtl:1.0 din tvalid";
+	attribute X_INTERFACE_INFO of din_tready: signal is "xilinx.com:interface:axis_rtl:1.0 din tready";
+	attribute X_INTERFACE_INFO of din_tdata: signal is "xilinx.com:interface:axis_rtl:1.0 din tdata";
+	attribute X_INTERFACE_INFO of dout_tvalid: signal is "xilinx.com:interface:axis_rtl:1.0 dout tvalid";
+	attribute X_INTERFACE_INFO of dout_tready: signal is "xilinx.com:interface:axis_rtl:1.0 dout tready";
+	attribute X_INTERFACE_INFO of dout_tdata: signal is "xilinx.com:interface:axis_rtl:1.0 dout tdata";
+
 	constant largeOrder: integer := {totalBits:d};
 	signal fftClk_gated: std_logic;
 	signal bp_ce, bp_ostrobe: std_logic;

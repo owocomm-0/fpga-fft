@@ -337,7 +337,7 @@ entity {entityName:s} is
 		dout_tready: in std_logic;
 		dout_tdata: out std_logic_vector(dataBits*2-1 downto 0);
 
-		inFlags, outFlags: in std_logic_vector(3 downto 0));
+		inFlags, outFlags: in std_logic_vector(6 downto 0));
 end entity;
 architecture ar of {entityName:s} is
 	attribute X_INTERFACE_INFO : string;
@@ -349,7 +349,7 @@ architecture ar of {entityName:s} is
 	constant largeOrder: integer := {totalBits:d};
 	signal fftClk_gated: std_logic;
 	signal bp_ce, bp_ostrobe: std_logic;
-	signal inFlags1: std_logic_vector(3 downto 0);
+	signal inFlags1, outFlags1: std_logic_vector(6 downto 0);
 	signal bp_ce1, bp_ce2: std_logic;
 	signal bp_indata, bp_outdata, bp_indata1, bp_indata2: std_logic_vector(dataBits*2-1 downto 0);
 	signal bp_inphase, bp_inphase1, bp_inphase2, gated_inphase: unsigned(largeOrder-1 downto 0);
@@ -391,12 +391,13 @@ begin
 	gated_inphase <= bp_inphase2;
 
 	inFlags1 <= inFlags when gated_inphase=(2**(gated_inphase'length) - 20) and rising_edge(fftClk_gated);
+	outFlags1 <= outFlags when gated_inphase=(2**(gated_inphase'length) - 20) and rising_edge(fftClk_gated);
 
 	fft: entity {largeFFTName:s}
 		generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>fftClk_gated, din=>gated_din,
 				twMultEnable=>inFlags1(2),
-				inTranspose=>'0', outTranspose=>'1',
+				inTranspose=>inFlags1(3), outTranspose=>outFlags1(3),
 				phase=>gated_inphase,
 				dout=>gated_dout);
 

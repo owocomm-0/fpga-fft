@@ -70,6 +70,8 @@ use work.twiddleGeneratorPartial{twLowerSize:d};
 use work.{multiplierEntity:s};
 
 -- delay is {delay:d}
+-- twMultEnable enables the twiddle pre-multiply.
+-- inTranspose and outTranspose enable the input/output burst transposers.
 entity {entityName:s} is
 	generic(dataBits: integer := 24; twBits: integer := 12);
 	port(clk: in std_logic;
@@ -80,6 +82,7 @@ entity {entityName:s} is
 end entity;
 architecture ar of {entityName:s} is
 	signal din1: complex;
+	signal ph: unsigned({totalBits:d}-1 downto 0);
 	signal ibreorder_dout, twMult_dout, ireorder_dout, core_dout, oreorder_dout, obreorder_dout, twOut: complex;
 	signal ibreorder_phase, tw_phase, ireorder_phase, core_phase, oreorder_phase, obreorder_phase: unsigned({totalBits:d}-1 downto 0);
 	signal twX, twY, twX1, twY1: unsigned({colBits:d}-1 downto 0);
@@ -98,18 +101,25 @@ architecture ar of {entityName:s} is
 	signal twMultEnable1,inTranspose1,outTranspose1: std_logic;
 
 	constant twDelay: integer := {twiddleDelay:d};
+	constant cumDelay_ibreorder: integer := 0;
+	constant cumDelay_tw: integer := cumDelay_ibreorder + {breorderDelay:d};
+	constant cumDelay_ireorder: integer := cumDelay_tw + {twMultDelay:d};
+	constant cumDelay_core: integer := cumDelay_ireorder + {reorderDelay:d};
+	constant cumDelay_oreorder: integer := cumDelay_core + {fftDelay:d};
+	constant cumDelay_obreorder: integer := cumDelay_oreorder + {reorderDelay:d};
 begin
 	twMultEnable1 <= twMultEnable when rising_edge(clk);
 	din1 <= din when rising_edge(clk);
-	inTranspose1 <= not inTranspose when rising_edge(clk);
-	outTranspose1 <= not outTranspose when rising_edge(clk);
+	inTranspose1 <= inTranspose when rising_edge(clk);
+	outTranspose1 <= outTranspose when rising_edge(clk);
+	ph <= phase when rising_edge(clk);
 
 	ibreorder_phase <= phase when rising_edge(clk);
-	tw_phase <= ibreorder_phase - {breorderDelay:d} + 1 when rising_edge(clk);
-	ireorder_phase <= tw_phase - {twMultDelay:d} + 1 when rising_edge(clk);
-	core_phase <= ireorder_phase - {reorderDelay:d} + 1 when rising_edge(clk);
-	oreorder_phase <= core_phase - {fftDelay:d} + 1 when rising_edge(clk);
-	obreorder_phase <= core_phase - {reorderDelay:d} + 1 when rising_edge(clk);
+	tw_phase <= ph - cumDelay_tw + 1 when rising_edge(clk);
+	ireorder_phase <= ph - cumDelay_ireorder + 1 when rising_edge(clk);
+	core_phase <= ph - cumDelay_core + 1 when rising_edge(clk);
+	oreorder_phase <= ph - cumDelay_oreorder + 1 when rising_edge(clk);
+	obreorder_phase <= ph - cumDelay_obreorder + 1 when rising_edge(clk);
 
 
 	ibreorder: entity transposer

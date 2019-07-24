@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# usage: ./do_gen_fft_large INSTANCE_NAME
+
+# generates a large fft and axi wrapper in a single file
+# outputs to ../generated/INSTANCE_NAME_large_axi.vhd
+
 NAME="$1"
 OUTFILE="../generated/${NAME}_large_axi.vhd"
 

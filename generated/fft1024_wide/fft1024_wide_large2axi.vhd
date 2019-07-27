@@ -9,17 +9,23 @@ use work.axiBlockProcessorAdapter2;
 use work.fft1024_wide_large2;
 
 entity fft1024_wide_large2axi is
-	generic(dataBits: integer := 32; twBits: integer := 24);
+	generic(dataBits: integer := 32;
+			twBits: integer := 24;
+			tuserWidth: integer := 7;
+			twMultFlagNum: integer := AXIFFT_FLAG_TWIDDLE_MULTIPLY;
+			ibTransposeFlagNum: integer := AXIFFT_FLAG_INPUT_BURST_TRANSPOSE;
+			obTransposeFlagNum: integer := AXIFFT_FLAG_OUTPUT_BURST_TRANSPOSE);
 	port(aclk, aclk_unbuffered, reset: in std_logic;
 		din_tvalid: in std_logic;
 		din_tready: out std_logic;
 		din_tdata: in std_logic_vector(dataBits*2-1 downto 0);
+		din_tuser: in std_logic_vector(tuserWidth-1 downto 0);
 
 		dout_tvalid: out std_logic;
 		dout_tready: in std_logic;
 		dout_tdata: out std_logic_vector(dataBits*2-1 downto 0);
-
-		inFlags, outFlags: in std_logic_vector(6 downto 0));
+		dout_tuser: out std_logic_vector(tuserWidth-1 downto 0)
+	);
 end entity;
 architecture ar of fft1024_wide_large2axi is
 	attribute X_INTERFACE_INFO : string;
@@ -31,14 +37,16 @@ architecture ar of fft1024_wide_large2axi is
 	attribute X_INTERFACE_INFO of din_tvalid: signal is "xilinx.com:interface:axis_rtl:1.0 din tvalid";
 	attribute X_INTERFACE_INFO of din_tready: signal is "xilinx.com:interface:axis_rtl:1.0 din tready";
 	attribute X_INTERFACE_INFO of din_tdata: signal is "xilinx.com:interface:axis_rtl:1.0 din tdata";
+	attribute X_INTERFACE_INFO of din_tuser: signal is "xilinx.com:interface:axis_rtl:1.0 din tuser";
 	attribute X_INTERFACE_INFO of dout_tvalid: signal is "xilinx.com:interface:axis_rtl:1.0 dout tvalid";
 	attribute X_INTERFACE_INFO of dout_tready: signal is "xilinx.com:interface:axis_rtl:1.0 dout tready";
 	attribute X_INTERFACE_INFO of dout_tdata: signal is "xilinx.com:interface:axis_rtl:1.0 dout tdata";
+	attribute X_INTERFACE_INFO of dout_tuser: signal is "xilinx.com:interface:axis_rtl:1.0 dout tuser";
 
 	constant largeOrder: integer := 20;
 	signal fftClk_gated: std_logic;
 	signal bp_ce, bp_ostrobe: std_logic;
-	signal inFlags1, outFlags1: std_logic_vector(6 downto 0);
+	signal inFlags1, inFlags2: std_logic_vector(tuserWidth-1 downto 0);
 	signal bp_ce1, bp_ce2: std_logic;
 	signal bp_indata, bp_outdata, bp_indata1, bp_indata2: std_logic_vector(dataBits*2-1 downto 0);
 	signal bp_inphase, bp_inphase1, bp_inphase2, gated_inphase: unsigned(largeOrder-1 downto 0);
@@ -79,14 +87,16 @@ begin
 	gated_din <= to_complex(signed(bp_indata2(dataBits-1 downto 0)), signed(bp_indata2(dataBits*2-1 downto dataBits)));
 	gated_inphase <= bp_inphase2;
 
-	inFlags1 <= inFlags when gated_inphase=(2**(gated_inphase'length) - 20) and rising_edge(fftClk_gated);
-	outFlags1 <= outFlags when gated_inphase=(2**(gated_inphase'length) - 20) and rising_edge(fftClk_gated);
+	inFlags1 <= din_tuser when din_tvalid='1' and rising_edge(aclk);
+	inFlags2 <= inFlags1 when gated_inphase=(2**(gated_inphase'length) - 20) and rising_edge(fftClk_gated);
+	dout_tuser <= inFlags2 when rising_edge(fftClk_gated);
 
 	fft: entity fft1024_wide_large2
 		generic map(dataBits=>dataBits, twBits=>twBits)
 		port map(clk=>fftClk_gated, din=>gated_din,
-				twMultEnable=>inFlags1(2),
-				inTranspose=>inFlags1(3), outTranspose=>outFlags1(3),
+				twMultEnable=>inFlags2(twMultFlagNum),
+				inTranspose=>inFlags2(ibTransposeFlagNum),
+				outTranspose=>inFlags2(obTransposeFlagNum),
 				phase=>gated_inphase,
 				dout=>gated_dout);
 

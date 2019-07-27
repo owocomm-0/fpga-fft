@@ -21,7 +21,20 @@ package fft_types is
 	-- use BRAM instead of LUTRAM when the address width of the
 	-- ram inside a transposer or reorderBuffer is at least this value
 	constant TRANSPOSER_BRAM_THRESHOLD: integer := 7;
-	
+
+
+	-- the following constants apply to AXI large FFT and may be overridden by
+	-- generic parameters passed to the instance.
+
+	-- which bit of din_tuser controls twiddle pre-multiply enable
+	constant AXIFFT_FLAG_TWIDDLE_MULTIPLY: integer := 2;
+
+	-- which bit of din_tuser controls input burst transpose (reorders words within a burst)
+	constant AXIFFT_FLAG_INPUT_BURST_TRANSPOSE: integer := 3;
+
+	-- which bit of din_tuser controls output burst transpose (reorders words within a burst)
+	constant AXIFFT_FLAG_OUTPUT_BURST_TRANSPOSE: integer := 4;
+
 	attribute relDelay: integer;
 	
 	type complex is record

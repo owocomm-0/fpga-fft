@@ -50,7 +50,9 @@ package fft_types is
     function to_complex (re,im: signed) return complex;
     function complex_re(val: complex; bits: integer) return signed;
     function complex_im(val: complex; bits: integer) return signed;
-    
+    function complex_pack(val: complex; bits: integer) return std_logic_vector;
+    function complex_unpack(val: std_logic_vector) return complex;
+   
     function saturate (val: complex; bits: integer) return complex;
     function keepNBits (val: complex; bits: integer) return complex;
     function shift_left(val: complex; N: integer) return complex;
@@ -147,7 +149,18 @@ package body fft_types is
 	begin
 		return val.im(bits-1 downto 0); --to_signed(val.im, bits);
 	end function;
-	
+	function complex_pack(val: complex; bits: integer) return std_logic_vector is
+	begin
+		return std_logic_vector(val.im(bits-1 downto 0))
+				& std_logic_vector(val.re(bits-1 downto 0));
+	end function;
+	function complex_unpack(val: std_logic_vector) return complex is
+		variable dataBits: integer := val'length / 2;
+	begin
+		return to_complex(signed(val(dataBits-1 downto 0)),
+							signed(val(val'left downto dataBits)));
+	end function;
+
 	function saturate(val: complex; bits: integer) return complex is
 		variable res: complex;
 		--variable max1: integer := (2**(bits-1))-1;

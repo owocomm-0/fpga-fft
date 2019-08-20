@@ -12,8 +12,10 @@ all: libaxi_fft.a
 %.o: %.C
 	$(CXX) -c $(CXXFLAGS2) $< -o $@
 
-../axi-util/sw/libaxi_pipe.a:
-	make -C ../axi-util/sw libaxi_pipe.a
+../axi-util/sw/libaxi_pipe.a: FORCE
+	$(MAKE) -C ../axi-util/sw libaxi_pipe.a
+
+FORCE:
 
 libaxi_fft.a: axi_fft.o ../axi-util/sw/libaxi_pipe.a
 	ar rcsT $@ $^

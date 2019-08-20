@@ -15,8 +15,10 @@ all: axi_fft_test
 %.o: %.C
 	$(CXX) -c $(CXXFLAGS2) $< -o $@
 
-../libaxi_fft.a:
+../libaxi_fft.a: FORCE
 	$(MAKE) -C .. libaxi_fft.a
+
+FORCE:
 
 axi_fft_test: axi_fft_test.o copy_array.o ../libaxi_fft.a
 	$(CXX) $(LIBS) $^ -o $@

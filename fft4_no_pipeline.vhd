@@ -8,6 +8,7 @@ use work.fft_types.all;
 entity fft4_noPipeline is
 	generic(dataBits: integer := 18;
 			scale: scalingModes := SCALE_DIV_SQRT_N;
+			inverse: boolean := true;
 			round: boolean := true);
 	port(din: in complexArray(3 downto 0);
 		dout: out complexArray(3 downto 0)
@@ -24,9 +25,17 @@ begin
 	resA1 <= a(0) + a(2);
 	resA2 <= a(0) - a(2);
 	resB1 <= a(1) + a(3);
-	resB2.re <= a(1).im - a(3).im;
-	resB2.im <= a(3).re - a(1).re;
-	
+
+	-- resB2 is multiplied by either j or -j
+g3: if inverse generate
+		resB2.re <= a(1).im - a(3).im;
+		resB2.im <= a(3).re - a(1).re;
+	end generate;
+g4: if not inverse generate
+		resB2.re <= a(3).im - a(1).im;
+		resB2.im <= a(1).re - a(3).re;
+	end generate;
+
 	b(0) <= resA1 + resB1;
 	b(3) <= resA2 + resB2;
 	b(2) <= resA1 - resB1;

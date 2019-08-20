@@ -18,6 +18,7 @@ entity fft4_serial3 is
 	generic(dataBits: integer := 18;
 			bitReversedOrder: boolean := false;
 			scale: scalingModes := SCALE_DIV_SQRT_N;
+			inverse: boolean := true;
 			round: boolean := true);
 
 	port(clk: in std_logic;
@@ -32,6 +33,8 @@ architecture ar of fft4_serial3 is
 	signal shiftIn,fftIn_mCycle,fftOut_mCycle_0,fftOut_mCycle: complexArray(3 downto 0);
 	signal fftIn_mCycle_reordered, fftOut_mCycle_0_reordered: complexArray(3 downto 0);
 	signal shiftOut,shiftOutNext: complexArray(3 downto 0);
+	attribute keep: string;
+	attribute keep of ph1: signal is "true";
 begin
 	ph1 <= phase when rising_edge(clk);
 	shiftIn <= din & shiftIn(3 downto 1) when rising_edge(clk);
@@ -54,8 +57,9 @@ g2: if not bitReversedOrder generate
 	end generate;
 	
 	fft1: entity fft4_noPipeline
-		generic map(dataBits=>dataBits, scale=>scale, round=>round)
+		generic map(dataBits=>dataBits, scale=>scale, inverse=>inverse, round=>round)
 		port map(fftIn_mCycle_reordered, fftOut_mCycle_0_reordered);
+
 	fftOut_mCycle <= fftOut_mCycle_0 when ph1=3 and rising_edge(clk);
 	-- 9 cycles
 	

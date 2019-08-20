@@ -105,6 +105,23 @@ int myLog2(int n) {
 }
 
 
+void printMatrix(volatile uint64_t* matrix, int subW, int subH) {
+	for(int Y=0;Y<subH;Y++) {
+		uint32_t Y1 = expandBits(Y/h) << 1;
+		for(int X=0; X<subW; X++) {
+			uint32_t X1 = expandBits(X/w);
+			uint32_t addr = X1 | Y1;
+			addr = addr*burstLength + (Y%h)*w + (X%w);
+			
+			uint64_t data = matrix[addr];
+			int32_t re = int32_t(data);
+			int32_t im = int32_t(data>>32);
+			printf("%9d,", re);
+		}
+		printf("\n");
+	}
+}
+
 void test1(bool simple) {
 	volatile uint64_t* srcMatrix = (volatile uint64_t*)reservedMem;
 	volatile uint64_t* dstMatrix = (volatile uint64_t*)(reservedMem + sz);
@@ -171,21 +188,7 @@ void test1(bool simple) {
 		if(y < 10)
 			printf("max error: %.1f LSB, rms error %.1f LSB\n", maxError, sqrt(errorPower/cols));
 	}
-	
-	for(int Y=0;Y<16;Y++) {
-		uint32_t Y1 = expandBits(Y/h) << 1;
-		for(int X=0; X<16; X++) {
-			uint32_t X1 = expandBits(X/w);
-			uint32_t addr = X1 | Y1;
-			addr = addr*burstLength + (Y%h)*w + (X%w);
-			
-			uint64_t data = dstMatrix[addr];
-			int32_t re = int32_t(data);
-			int32_t im = int32_t(data>>32);
-			printf("%9d,", re);
-		}
-		printf("\n");
-	}
+	printMatrix(dstMatrix, 16,16);
 }
 
 
@@ -291,6 +294,7 @@ void test2() {
 	double maxError = 0, errorPower = 0;
 	double maxRatioError = 0;
 	double maxVal = 0;
+	int errorCount = 0;
 	for(int x=0; x<N; x++) {
 		complexd correct = fftw_outp[x]*fftw_scale;
 		complexd error = outData[x] - correct;
@@ -308,8 +312,10 @@ void test2() {
 		
 		if(mag > maxVal)
 			maxVal = mag;
-		if(x <= 10)
-			printf("item %d: should be %.1f, is %.1f\n", x, correct.real(), outData[x].real());
+		
+		if(errorMag >= 16 && (errorCount++) < 10)
+			printf("item %7d: should be %13.1f  is %13.1f  error %6.1f\n",
+					x, correct.real(), outData[x].real(), errorMag);
 	}
 	printf("max value: %lld\n", int64_t(round(maxVal)));
 	printf("max error: %.1f LSB, rms error %.1f LSB\n", maxError, sqrt(errorPower/N));
@@ -400,7 +406,7 @@ int main(int argc, char** argv) {
 	if(mapReservedMem() < 0) {
 		return 1;
 	}
-	fft = new OwOComm::AXIFFT(0x43C10000, 512,512,2,2);
+	fft = new OwOComm::AXIFFT(0x43C10000, "/dev/uio1", 512,512,2,2);
 	fft->reservedMem = reservedMem;
 	fft->reservedMemEnd = reservedMemEnd;
 	fft->reservedMemAddr = reservedMemAddr;
@@ -408,7 +414,7 @@ int main(int argc, char** argv) {
 	
 
 #ifdef SDR5_FLAGS
-	uint32_t MYFLAG_HALFWIDTH = (1<<4) | (1<<1);
+	uint32_t MYFLAG_HALFWIDTH = (1<<5) | (1<<1);
 
 	// we used a custom address permutation module so we need to
 	// use our custom flags.
@@ -437,6 +443,6 @@ int main(int argc, char** argv) {
 	//test3(atoi(argv[1]), atoi(argv[2]));
 	
 	//loopbackTest();
-	
+
 	return 0;
 }

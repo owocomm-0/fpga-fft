@@ -1,3 +1,4 @@
+#pragma once
 #include <owocomm/axi_pipe.H>
 
 // enable twiddle multiplier before fft
@@ -17,9 +18,9 @@ namespace OwOComm {
 		uint32_t pass2InFlags = AXIPIPE_FLAG_INTERLEAVE | AXIFFT_FLAG_INPUT_BURST_TRANSPOSE | AXIFFT_FLAG_TWIDDLE_MULTIPLY;
 		uint32_t pass2OutFlags = AXIPIPE_FLAG_INTERLEAVE | AXIPIPE_FLAG_TRANSPOSE;
 
-		AXIFFT(volatile void* regsAddr, int W, int H, int w, int h);
+		AXIFFT(volatile void* regsAddr, int irqfd, int W, int H, int w, int h);
 
-		AXIFFT(uint32_t regsAddr, int W, int H, int w, int h);
+		AXIFFT(uint32_t regsAddr, const char* irqDevice, int W, int H, int w, int h);
 
 		void setSizes();
 
@@ -31,5 +32,10 @@ namespace OwOComm {
 		void waitFFT(uint32_t marker);
 
 		void performLargeFFT(volatile void* src, volatile void* dst, volatile void* scratch);
+		void performLargeFFTAsync(volatile void* src, volatile void* dst, volatile void* scratch, const function<void()>& cb);
+	protected:
+		volatile void* _dst;
+		volatile void* _scratch;
+		function<void()> _cb;
 	};
 }

@@ -33,14 +33,19 @@ architecture a of complexRam is
 	signal wrdata1: std_logic_vector(width-1 downto 0);
 	
 	signal tmpdata: std_logic_vector(width-1 downto 0);
-	signal tmpdata1,tmpdata2: signed(dataBits-1 downto 0) := (others=>'0');
+	signal tmpdata1,tmpdata2: signed(dataBits-1 downto 0);
 begin
 	--inferred ram
-	rdaddr1 <= rdaddr when rising_edge(rdclk);
+	rdaddr1 <= rdaddr; -- when rising_edge(rdclk);
 	
 	-- TODO: we are assuming this infers a register on the address side (rather than output side);
 	-- this is true on xilinx but we should verify it on other vendor tools as well.
-	tmpdata <= ram1(to_integer(rdaddr1));
+	process(rdclk)
+	begin
+		 if(rising_edge(rdclk)) then
+				tmpdata <= ram1(to_integer(rdaddr1));
+		 end if;
+	end process;
 	
 	tmpdata1 <= signed(tmpdata(dataBits-1 downto 0)) when rising_edge(rdclk);
 	tmpdata2 <= signed(tmpdata(width-1 downto dataBits)) when rising_edge(rdclk);

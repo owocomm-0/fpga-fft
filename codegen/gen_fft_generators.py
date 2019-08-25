@@ -249,10 +249,14 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 use work.fft_types.all;
 use work.{0:s};
-use work.{0:s}_ireorderer{1:d};
 use work.{0:s}_oreorderer{1:d};
 '''.format(fftName, rows)
-	
+
+	if not skipInputReorder:
+		code += '''
+use work.{0:s}_ireorderer{1:d};
+'''.format(fftName, rows)
+
 	#          0         1           2       3
 	params = [delay, entityName, totalBits, rows]
 	code += '''

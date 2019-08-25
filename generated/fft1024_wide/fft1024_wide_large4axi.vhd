@@ -15,6 +15,7 @@ entity fft1024_wide_large4axi is
 			twMultFlagNum: integer := AXIFFT_FLAG_TWIDDLE_MULTIPLY;
 			ibTransposeFlagNum: integer := AXIFFT_FLAG_INPUT_BURST_TRANSPOSE;
 			obTransposeFlagNum: integer := AXIFFT_FLAG_OUTPUT_BURST_TRANSPOSE);
+
 	port(aclk, aclk_unbuffered, reset: in std_logic;
 		din_tvalid: in std_logic;
 		din_tready: out std_logic;

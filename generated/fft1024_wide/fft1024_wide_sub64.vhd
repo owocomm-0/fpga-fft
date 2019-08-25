@@ -90,9 +90,12 @@ begin
 	dout <= sub2dout;
 	bitPermOut <= bitPermIn(0)&bitPermIn(1)&bitPermIn(2)&bitPermIn(3);
 
-	tw: entity twiddleGenerator generic map(twiddleBits, order, inverse=>inverse)
+	tw: entity twiddleGenerator
+		generic map(twiddleBits, order, inverse=>inverse)
 		port map(clk, twAddr, twData, romAddr, romData);
-	rom: entity twiddleRom64 port map(clk, romAddr,romData);
+
+	rom: entity twiddleRom64 generic map(twBits=>twiddleBits)
+		port map(clk, romAddr,romData);
 	sub1: entity fft1024_wide_sub16 generic map(dataBits=>sub1dataBits, twBits=>twBits, inverse=>inverse)
 		port map(clk=>clk, din=>sub1din, phase=>sub1phase, dout=>sub1dout);
 	sub2inst: entity fft4_serial7

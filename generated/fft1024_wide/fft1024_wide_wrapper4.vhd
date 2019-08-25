@@ -5,8 +5,9 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 use work.fft_types.all;
 use work.fft1024_wide;
-use work.fft1024_wide_ireorderer4;
 use work.fft1024_wide_oreorderer4;
+
+use work.fft1024_wide_ireorderer4;
 
 -- 4 interleaved channels, natural order
 -- phase should be 0,1,2,3,4,5,6,...

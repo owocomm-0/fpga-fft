@@ -88,9 +88,21 @@ fft1024 = \
 	FFT4Step(1024,
 		FFT4Step(64,
 			FFT4Step(16, 
-				fft4_scale_none,
-				fft4_scale_none),
+				fft4_scale_div_sqrt_n,
+				fft4_scale_div_sqrt_n),
 			fft4_scale_div_sqrt_n),
+		FFT4Step(16, 
+			fft4_scale_div_sqrt_n,
+			fft4_scale_div_sqrt_n));
+
+
+fft1024_scaled = \
+	FFT4Step(1024,
+		FFT4Step(64,
+			FFT4Step(16, 
+				fft4_scale_div_n,
+				fft4_scale_div_n),
+			fft4_scale_div_n),
 		FFT4Step(16, 
 			fft4_scale_div_n,
 			fft4_scale_div_n));
@@ -140,6 +152,16 @@ fft1024_2 = \
 				fft4_large_scale_div_sqrt_n,
 				fft4_scale_div_n)),
 		fft4_scale_div_n);
+fft1024_spdf = \
+	FFTSPDF(1024,
+		bfBitGrowth=1,
+		sub1=FFTSPDF(256,
+			bfBitGrowth=1,
+			sub1=FFT4Step(64,
+				FFT4Step(16, 
+					fft4_scale_div_sqrt_n,
+					fft4_scale_div_n),
+				fft4_scale_div_n)));
 
 
 fft1024_spdf_wide = \

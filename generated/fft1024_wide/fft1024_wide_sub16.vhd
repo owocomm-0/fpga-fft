@@ -88,7 +88,8 @@ begin
 	dout <= sub2dout;
 	bitPermOut <= bitPermIn(0)&bitPermIn(1);
 
-	tw: entity twiddleGenerator16 generic map(inverse=>inverse)
+	tw: entity twiddleGenerator16
+		generic map(twBits=>twiddleBits, inverse=>inverse)
 		port map(clk, twAddr, twData);
 	sub1inst: entity fft4_serial7
 		generic map(dataBits=>sub1dataBits, scale=>SCALE_NONE, inverse=>inverse)

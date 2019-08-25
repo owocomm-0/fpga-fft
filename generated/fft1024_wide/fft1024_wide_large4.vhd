@@ -99,9 +99,11 @@ begin
 		port map(clk=>clk, rdAddr=>twAddrUpper, rdData=>twDataUpper,
 				romAddr=>romAddrUpper, romData=>romDataUpper);
 	romUpper: entity twiddleRom2048
+		generic map(twBits=>twBits)
 		port map(clk=>clk, romAddr=>romAddrUpper, romData=>romDataUpper);
 
 	twLower: entity twiddleGeneratorPartial512
+		generic map(twBits=>twBits)
 		port map(clk=>clk, twAddr=>twAddrLower, twData=>twDataLower);
 
 	twGenMult: entity dsp48e1_complexMultiply

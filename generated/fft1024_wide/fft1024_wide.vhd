@@ -108,9 +108,12 @@ begin
 	dout <= sub2dout;
 	bitPermOut <= bitPermIn(0)&bitPermIn(1)&bitPermIn(2)&bitPermIn(3)&bitPermIn(4)&bitPermIn(5);
 
-	tw: entity twiddleGenerator generic map(twiddleBits, order, inverse=>inverse)
+	tw: entity twiddleGenerator
+		generic map(twiddleBits, order, inverse=>inverse)
 		port map(clk, twAddr, twData, romAddr, romData);
-	rom: entity twiddleRom1024 port map(clk, romAddr,romData);
+
+	rom: entity twiddleRom1024 generic map(twBits=>twiddleBits)
+		port map(clk, romAddr,romData);
 	rP1 <= rP0(1)&rP0(0)&rP0(3)&rP0(2) when rCnt(0)='1' else rP0;
 
 

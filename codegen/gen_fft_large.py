@@ -153,9 +153,11 @@ begin
 		port map(clk=>clk, rdAddr=>twAddrUpper, rdData=>twDataUpper,
 				romAddr=>romAddrUpper, romData=>romDataUpper);
 	romUpper: entity twiddleRom{twUpperSize:d}
+		generic map(twBits=>twBits)
 		port map(clk=>clk, romAddr=>romAddrUpper, romData=>romDataUpper);
 
 	twLower: entity twiddleGeneratorPartial{twLowerSize:d}
+		generic map(twBits=>twBits)
 		port map(clk=>clk, twAddr=>twAddrLower, twData=>twDataLower);
 
 	twGenMult: entity {multiplierEntity:s}

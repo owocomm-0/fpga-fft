@@ -7,11 +7,13 @@ use work.fft_types.all;
 -- If customSubOrder is true, the columns (slow changing part of the phase)
 -- are reordered by a user defined permutation. bitPermOut and bitPermIn
 -- should be connected to this permutation function (purely combinational).
+-- If bitReverse4 is true, subOrder2 must be 4 and the rows are reordered as 0,2,1,3.
 -- total delay is equal to -twiddleDelay.
 entity twiddleAddrGen is
 	generic(subOrder1,subOrder2: integer := 4;
 			twiddleDelay: integer := 7;
-			customSubOrder: boolean := false
+			customSubOrder: boolean := false;
+			bitReverse4: boolean := false
 			);
 
 	port(clk: in std_logic;
@@ -51,9 +53,16 @@ g2: if not extraPhaseReg generate
 	bitPermIn <= ph_twiddle(ph_twiddle'left downto subOrder2);
 	twMajorAddr <= bitPermOut when customSubOrder=true else
 		ph_twiddle(ph_twiddle'left downto subOrder2);
-	
-	twAddr0Next <= (others=>'0') when ph_twiddle(subOrder2-1 downto 0)=0 else
+
+g3: if not bitReverse4 generate
+		twAddr0Next <= (others=>'0') when ph_twiddle(subOrder2-1 downto 0)=0 else
 					twAddr0 + twMajorAddr;
+	end generate;
+g4: if bitReverse4 generate
+		twAddr0Next <= (others=>'0') when ph_twiddle(subOrder2-1 downto 0)=0 else
+					twAddr0 + (twMajorAddr & "0") when ph_twiddle(0)='1' else
+					twAddr0 - twMajorAddr;
+	end generate;
 	twAddr0 <= twAddr0Next when rising_edge(clk); -- aligned with ph0+twiddleDelay
 	twAddr <= twAddr0;
 end ar;

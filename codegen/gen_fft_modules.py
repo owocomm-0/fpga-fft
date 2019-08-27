@@ -241,14 +241,22 @@ class FFT4Step:
 			self.simpleTwiddleRom = True
 			self.twiddleDelay = twiddleRomSimpleDelay(N)
 			self.imports.append('twiddleGenerator%d' % N)
-		
+
+
+		self.sub2Transposer = False
+		self.sub2BitReverse4 = False
 		if not bitOrderIsNatural(sub2.inputBitOrder()):
-			self.sub2Transposer = True
-			self.reorderPerm = BitPermutation(sub2.inputBitOrder())
-			self.reorderDelay = sub2.N + self.reorderAdditiveDelay
-			self.imports.append('reorderBuffer')
-		else:
-			self.sub2Transposer = False
+			if sub2.N == 4:
+				self.sub2BitReverse4 = True
+				#self.sub2Transposer = True
+				#self.reorderPerm = BitPermutation(sub2.inputBitOrder())
+				#self.reorderDelay = 4
+				#self.imports.append('transposer4')
+			else:
+				self.sub2Transposer = True
+				self.reorderPerm = BitPermutation(sub2.inputBitOrder())
+				self.reorderDelay = sub2.N + self.reorderAdditiveDelay
+				self.imports.append('reorderBuffer')
 
 	# def setDataBits(self, dataBits):
 		# if self.dataBits == dataBits:
@@ -299,9 +307,12 @@ class FFT4Step:
 	def inputBitOrder(self):
 		O1 = myLog2(self.sub1.N)
 		O2 = myLog2(self.sub2.N)
-		
-		# sub2 must accept data in natural order
-		tmp = range(O1,O1+O2)
+
+		if self.sub2Transposer:
+			tmp = range(O1,O1+O2)
+		else:
+			tmp = [x+O1 for x in self.sub2.inputBitOrder()]
+
 		tmp += self.sub1.inputBitOrder()
 		return tmp
 
@@ -402,7 +413,9 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 		#              7          8         9   10
 					self.N, self.multDelay, '', '',
 		#              11         12         13         14              15
-					sub1order, sub2order, sub1delay, sub2delay, self.multiplier.entity
+					sub1order, sub2order, sub1delay, sub2delay, self.multiplier.entity,
+		#              16
+					boolStr(self.sub2BitReverse4)
 					]
 		body = '''
 {1:s}din <= {0:s}din;
@@ -421,7 +434,8 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 		subOrder1=>{11:d},
 		subOrder2=>{12:d},
 		twiddleDelay=>{0:s}twiddleDelay,
-		customSubOrder=>true)
+		customSubOrder=>true,
+		bitReverse4=>{16:s})
 	port map(
 		clk=>clk,
 		phase=>{0:s}ph2,
@@ -459,15 +473,31 @@ signal {0:s}rbInPhase: unsigned({2:d}-1 downto 0);
 		
 		body = body.format(*params)
 		if self.sub2Transposer:
-			params = [id, myLog2(self.sub2.N),
-						self.reorderPerm.sigIn(id),
-						self.reorderPerm.sigCount(id),
-						self.reorderPerm.sigOut(id),
-						subId2,
-						self.reorderAdditiveDelay,
-						self.reorderPerm.repLen]
-			body += self.reorderPerm.genBody(id)
-			body += '''
+			if self.sub2.N == 4:
+				params = [id, myLog2(self.sub2.N),
+							self.reorderPerm.sigIn(id),
+							self.reorderPerm.sigCount(id),
+							self.reorderPerm.sigOut(id),
+							subId2]
+				body += '''
+	
+{0:s}rb: entity transposer4
+	generic map(dataBits=>{0:s}dataBitsIntern)
+	port map(clk, din=>{0:s}rbIn, phase=>{0:s}rbInPhase, dout=>{5:s}din);
+	
+{5:s}phase <= {0:s}rbInPhase;
+	
+'''.format(*params)
+			else:
+				params = [id, myLog2(self.sub2.N),
+							self.reorderPerm.sigIn(id),
+							self.reorderPerm.sigCount(id),
+							self.reorderPerm.sigOut(id),
+							subId2,
+							self.reorderAdditiveDelay,
+							self.reorderPerm.repLen]
+				body += self.reorderPerm.genBody(id)
+				body += '''
 	
 {0:s}rb: entity reorderBuffer
 	generic map(N=>{1:d}, dataBits=>{0:s}dataBitsIntern, repPeriod=>{7:d}, bitPermDelay=>0, dataPathDelay=>{6:d})

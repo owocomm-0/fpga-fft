@@ -27,8 +27,8 @@ end entity;
 
 architecture ar of transposer4 is
 	signal srIn: complexArray(0 to 3);
-	signal currRE: std_logic;
-	signal srAddr: integer;
+	signal currRE: std_logic := '0';
+	signal srAddr: integer := 0;
 	signal dout0: complex;
 begin
 	-- use addressable shift registers (SRL16)

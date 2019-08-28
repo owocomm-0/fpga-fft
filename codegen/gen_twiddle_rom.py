@@ -14,7 +14,7 @@ widths = [int(x) for x in sys.argv[2:]];
 size = N/8;
 romDepthOrder = int(ceil(log(size)/log(2.)));
 useLUTRAM = (romDepthOrder <= 5)
-
+useBlockRAM = (romDepthOrder >= 8)
 
 name = 'twiddleRom'+str(N)
 
@@ -22,8 +22,14 @@ extraCode = ''
 if useLUTRAM:
 	extraCode = '''
 	attribute rom_style: string;
-	attribute rom_style of rom: signal is "distributed";
+	attribute rom_style of data0: signal is "distributed";
 	attribute rom_style of addr1: signal is "distributed";'''
+
+if useBlockRAM:
+	extraCode = '''
+	attribute rom_style: string;
+	attribute rom_style of data0: signal is "block";
+	attribute rom_style of addr1: signal is "block";'''
 
 def printROM(twBits):
 	romWidth = (twBits - 1)

@@ -9,21 +9,22 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 
 **Zynq-7000**
 
-| Name            | Configuration                   | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
-| --------------- | ------------------------------- | ----------- | ---- | ------- | ------- | -------- |
-| fft1024         | 24b data, 17b twiddle, rounded  | XC7Z010-1   | 2200 | 2.5     | 16      | 370 MHz  |
-| fft1024_wide    | 32b data, 24b twiddle, rounded  | XC7Z010-1   | 2631 | 4       | 32      | 310 MHz  |
-| fft4096         | 24b data, 17b twiddle, rounded  | XC7Z010-1   | 2207 | 8       | 20      | 359 MHz  |
+| Name              | Configuration                   | Device      | LUTs | FFs  | RAMB36  | DSP48E1 | Fmax     |
+| ----------------- | ------------------------------- | ----------- | ---- | ---- | ------- | ------- | -------- |
+| fft1024           | 24b data, 17b twiddle, rounded  | XC7Z010-1   | 1648 | 4087 | 2       | 16      | 350 MHz  |
+| fft1024_wide      | 32b data, 24b twiddle, rounded  | XC7Z010-1   | 2508 | 6096 | 3       | 32      | 310 MHz  |
+| fft1024_spdf_wide | 32b data, 24b twiddle, rounded  | XC7Z010-1   | 3259 | 7101 | 4       | 32      | 310 MHz  |
+| fft4096           | 24b data, 17b twiddle, rounded  | XC7Z010-1   | 2073 | 5016 | 6       | 20      | 343 MHz  |
 
 **Kintex-7**
 
-| Name            | Configuration                    | Device      | LUTs | RAMB36  | DSP48E1 | Fmax     |
-| --------------- | -------------------------------- | ----------- | ---- | ------- | ------- | -------- |
-| fft1024         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2492 | 2.5     | 16      | 458 MHz<sup>(1)</sup> |
-| fft4096         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2601 | 8       | 20      | 452 MHz |
-| fft8192         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2934 | 15      | 24      | 458 MHz<sup>(1)</sup> |
-| fft16k_2        | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 3222 | 29      | 28      | 445 MHz |
-| fft32k_wide     | 32b data, 24b twiddle, rounded   | XC7K160T-1  | 4416 | 74      | 56      | 421 MHz |
+| Name            | Configuration                    | Device      | LUTs | FFs   | RAMB36  | DSP48E1 | Fmax     |
+| --------------- | -------------------------------- | ----------- | ---- | ----- | ------- | ------- | -------- |
+| fft1024         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 1653 | 4087  | 2       | 16      | 458 MHz<sup>(1)</sup> |
+| fft4096         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2098 | 4942  | 6       | 20      | 458 MHz<sup>(1)</sup> |
+| fft8192         | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2279 | 5760  | 14      | 24      | 458 MHz<sup>(1)</sup> |
+| fft16k_2        | 24b data, 17b twiddle, rounded   | XC7K160T-1  | 2428 | 6563  | 29      | 28      | 458 MHz<sup>(1)</sup> |
+| fft32k_wide     | 32b data, 24b twiddle, rounded   | XC7K160T-1  | 3982 | 10245 | 73      | 56      | 458 MHz<sup>(1)</sup> |
 
 **Kintex Ultrascale**
 
@@ -37,7 +38,7 @@ Resource usage is on par with Xilinx FFT IP core, and Fmax is up to 30% higher f
 
 <sup>(2)</sup> Additional contraints are required on BRAM synthesis. See below.
 
-<sup>(3)</sup> Fmax numbers are based on Vivado (2018.3) timing analysis with "Performance_Explore" synthesis strategy.
+<sup>(3)</sup> Fmax numbers are based on Vivado (2019.1) timing analysis with "Performance_Explore" synthesis strategy.
 
 # Architecture
 The basic architecture is based on subdividing a size N = N1*N2 FFT into N2 FFTs of size N1 followed by reordering and multiplication by twiddle factors, then N1 FFTs of size N2.

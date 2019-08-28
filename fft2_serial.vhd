@@ -13,6 +13,8 @@ use work.fft2_noPipeline;
 entity fft2_serial is
 	generic(dataBits: integer := 18;
 			scale: scalingModes := SCALE_NONE;
+			-- inverse is ignored because ifft-2 is equivalent to fft-2
+			inverse: boolean := true;
 			round: boolean := true);
 
 	port(clk: in std_logic;

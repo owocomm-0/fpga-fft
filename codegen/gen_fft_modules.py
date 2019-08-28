@@ -778,7 +778,9 @@ signal {0:s}rbInPhase: unsigned({1:d}-1 downto 0);
 			body += '''
 {0:s}tw: entity twiddleGenerator generic map({0:s}twiddleBits, {0:s}order, inverse=>inverse)
 	port map(clk, {0:s}twAddr, {0:s}twData, {0:s}romAddr, {0:s}romData);
-{0:s}rom: entity twiddleRom{7:d} port map(clk, {0:s}romAddr,{0:s}romData);
+{0:s}rom: entity twiddleRom{7:d}
+	generic map(twBits=>{0:s}twiddleBits)
+	port map(clk, {0:s}romAddr,{0:s}romData);
 '''
 		
 		body = body.format(*params)

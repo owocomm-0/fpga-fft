@@ -5,7 +5,7 @@ use ieee.std_logic_1164.all;
 use work.fft_types.all;
 use work.multiplyAdd;
 
--- delay is 6 cycles
+-- delay is 5 cycles
 -- rounding is always enabled regardless of "round" parameter
 entity complexMultiply2 is
 	generic(in1Bits,in2Bits,outBits: integer := 8;
@@ -26,10 +26,10 @@ architecture a of complexMultiply2 is
 			ac3,bd3,ad3,bc3, ac4,bd4,ad4,bc4: signed(internalBits-1 downto 0);
 	signal res_re, res_im: signed(outBits-1 downto 0);
 begin
-	a <= complex_re(in1, in1Bits) when rising_edge(clk);
-	b <= complex_im(in1, in1Bits) when rising_edge(clk);
-	c <= complex_re(in2, in2Bits) when rising_edge(clk);
-	d <= complex_im(in2, in2Bits) when rising_edge(clk);
+	a <= complex_re(in1, in1Bits);-- when rising_edge(clk);
+	b <= complex_im(in1, in1Bits);-- when rising_edge(clk);
+	c <= complex_re(in2, in2Bits);-- when rising_edge(clk);
+	d <= complex_im(in2, in2Bits);-- when rising_edge(clk);
 	a1 <= a when rising_edge(clk);
 	b1 <= b when rising_edge(clk);
 	c1 <= c when rising_edge(clk);

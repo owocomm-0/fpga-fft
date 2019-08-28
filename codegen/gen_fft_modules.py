@@ -107,7 +107,7 @@ class Multiplier:
 	def delay(self):
 		return self.delay1
 
-defaultMult = Multiplier('complexMultiply2', 6)
+defaultMult = Multiplier('complexMultiply2', 5)
 largeMult = Multiplier('dsp48e1_complexMultiply', 9)
 
 

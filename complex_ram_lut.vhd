@@ -46,6 +46,9 @@ architecture a of complexRamLUT is
 	
 	attribute ram_style: string;
 	attribute ram_style of ram1: signal is "distributed";
+	attribute keep: string;
+	attribute keep of tmpdata1: signal is "true";
+	attribute keep of tmpdata2: signal is "true";
 begin
 	--inferred ram
 	rdaddr1 <= rdaddr when rising_edge(rdclk);

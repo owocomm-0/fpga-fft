@@ -5,8 +5,8 @@ use ieee.std_logic_1164.all;
 use work.fft_types.all;
 
 -- delay is 1 cycle; output is unregistered
--- if carryPosition is 0, add 1 to results
--- if carryPosition is 1, add 2 to results
+-- if carryPosition is 0, add 0 or 1 to results
+-- if carryPosition is 1, add 1 or 2 to results
 entity fft4_serial6_bf is
 	generic(dataBits: integer := 18;
 			carryPosition: integer := 0);

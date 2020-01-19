@@ -4,41 +4,93 @@
 
 from gen_fft_modules import *
 
-#fft2_scale_none = FFTBase(2, 'fft2_serial2', 'SCALE_NONE', 3)
-#fft2_scale_div_n = FFTBase(2, 'fft2_serial2', 'SCALE_DIV_N', 3)
 
-fft2_scale_none = FFTBase(2, 'fft2_serial', 'SCALE_NONE', 6)
-fft2_scale_div_n = FFTBase(2, 'fft2_serial', 'SCALE_DIV_N', 6)
-
-
-#fft4_scale_none = FFT4Step(4, fft2_scale_none, fft2_scale_none);
-#fft4_scale_div_sqrt_n = FFT4Step(4, fft2_scale_none, fft2_scale_div_n);
-#fft4_scale_div_n = FFT4Step(4, fft2_scale_div_n, fft2_scale_div_n);
+SCALE_NONE = 'SCALE_NONE'
+SCALE_DIV_SQRT_N = 'SCALE_DIV_SQRT_N'
+SCALE_DIV_N = 'SCALE_DIV_N'
 
 
-fft4_delay = 10
-#fft4_large_scale_none = FFTBase(4, 'fft4_serial3', 'SCALE_NONE', fft4_delay)
-fft4_large_scale_div_sqrt_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_SQRT_N', fft4_delay)
-#fft4_large_scale_div_n = FFTBase(4, 'fft4_serial3', 'SCALE_DIV_N', fft4_delay)
+def fft2_serial(scale, bitGrowth=0):
+	delay = 6
+	return FFTBase(2, 'fft4_serial3',
+					scale=scale,
+					delay=delay,
+					bitGrowth=bitGrowth)
 
 
-#fft4_delay = 12
-#fft4_scale_none = FFTBase(4, 'fft4_serial4', 'SCALE_NONE', fft4_delay)
-#fft4_scale_div_n = FFTBase(4, 'fft4_serial4', 'SCALE_DIV_N', fft4_delay)
+def fft4_serial3(scale, bitGrowth=0):
+	delay = 10
+	iBitOrder = [0,1]
+	oBitOrder = [1,0]
+	return FFTBase(4, 'fft4_serial3',
+					scale=scale,
+					delay=delay,
+					bitGrowth=bitGrowth,
+					iBitOrder=iBitOrder,
+					oBitOrder=oBitOrder)
+
+def fft4_serial7(scale, bitGrowth=0):
+	delay = 11
+	iBitOrder = [0,1]
+	oBitOrder = [1,0]
+	return FFTBase(4, 'fft4_serial7',
+					scale=scale,
+					delay=delay,
+					bitGrowth=bitGrowth,
+					iBitOrder=iBitOrder,
+					oBitOrder=oBitOrder)
+
+def fft4_serial8(scale, bitGrowth=0):
+	delay = 7
+	iBitOrder = [1,0]
+	oBitOrder = [1,0]
+	return FFTBase(4, 'fft4_serial8',
+					scale=scale,
+					delay=delay,
+					bitGrowth=bitGrowth,
+					iBitOrder=iBitOrder,
+					oBitOrder=oBitOrder)
+
+def fft4_serial9(scale, bitGrowth=0):
+	delay = 8
+	iBitOrder = [1,0]
+	oBitOrder = [1,0]
+	return FFTBase(4, 'fft4_serial9',
+					scale=scale,
+					delay=delay,
+					bitGrowth=bitGrowth,
+					iBitOrder=iBitOrder,
+					oBitOrder=oBitOrder)
 
 
+fft4_default = fft4_serial8
+fft4_scale_none = fft4_default(scale=SCALE_NONE)
+fft4_scale_none_bg1 = fft4_default(scale=SCALE_NONE, bitGrowth=1)
+fft4_scale_none_bg2 = fft4_default(scale=SCALE_NONE, bitGrowth=2)
+fft4_scale_div_sqrt_n = fft4_default(scale=SCALE_DIV_SQRT_N)
+fft4_scale_div_sqrt_n_bg1 = fft4_default(scale=SCALE_DIV_SQRT_N, bitGrowth=1)
+fft4_scale_div_n = fft4_default(scale=SCALE_DIV_N)
 
-#fft4_delay = 11
-#fft4_entity = 'fft4_serial7'
-fft4_delay = 7
-fft4_entity = 'fft4_serial8'
-fft4_iBitOrder = [1,0]
-fft4_oBitOrder = [1,0]
-fft4_scale_none = FFTBase(4, fft4_entity, 'SCALE_NONE', fft4_delay, iBitOrder=fft4_iBitOrder, oBitOrder=fft4_oBitOrder)
-fft4_scale_none_bg1 = FFTBase(4, fft4_entity, 'SCALE_NONE', fft4_delay, bitGrowth=1, iBitOrder=fft4_iBitOrder, oBitOrder=fft4_oBitOrder)
-fft4_scale_div_sqrt_n = FFTBase(4, fft4_entity, 'SCALE_DIV_SQRT_N', fft4_delay, iBitOrder=fft4_iBitOrder, oBitOrder=fft4_oBitOrder)
-fft4_scale_div_n = FFTBase(4, fft4_entity, 'SCALE_DIV_N', fft4_delay, iBitOrder=fft4_iBitOrder, oBitOrder=fft4_oBitOrder)
+fft4_default_small = fft4_serial9
+fft4_small_scale_none = fft4_default_small(scale=SCALE_NONE)
+fft4_small_scale_none_bg1 = fft4_default_small(scale=SCALE_NONE, bitGrowth=1)
+fft4_small_scale_none_bg2 = fft4_default_small(scale=SCALE_NONE, bitGrowth=2)
+fft4_small_scale_div_sqrt_n = fft4_default_small(scale=SCALE_DIV_SQRT_N)
+fft4_small_scale_div_sqrt_n_bg1 = fft4_default_small(scale=SCALE_DIV_SQRT_N, bitGrowth=1)
+fft4_small_scale_div_n = fft4_default_small(scale=SCALE_DIV_N)
 
+fft4_default_fast = fft4_serial3
+fft4_fast_scale_none = fft4_default_fast(scale=SCALE_NONE)
+fft4_fast_scale_none_bg1 = fft4_default_fast(scale=SCALE_NONE, bitGrowth=1)
+fft4_fast_scale_none_bg2 = fft4_default_fast(scale=SCALE_NONE, bitGrowth=2)
+fft4_fast_scale_div_sqrt_n = fft4_default_fast(scale=SCALE_DIV_SQRT_N)
+fft4_fast_scale_div_sqrt_n_bg1 = fft4_default_fast(scale=SCALE_DIV_SQRT_N, bitGrowth=1)
+fft4_fast_scale_div_n = fft4_default_fast(scale=SCALE_DIV_N)
+
+fft2_default = fft2_serial
+fft2_scale_none = fft2_default(scale=SCALE_NONE)
+fft2_scale_none_bg1 = fft2_default(scale=SCALE_NONE, bitGrowth=1)
+fft2_scale_div_n = fft2_default(scale=SCALE_DIV_N)
 
 
 fft16 = \

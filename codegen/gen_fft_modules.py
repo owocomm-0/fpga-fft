@@ -112,13 +112,13 @@ largeMult = Multiplier('dsp48e1_complexMultiply', 9)
 
 
 class FFTBase:
-	def __init__(self, N, entity, scale, delay1, bitGrowth=0, iBitOrder=None, oBitOrder=None):
+	def __init__(self, N, entity, scale, delay, bitGrowth=0, iBitOrder=None, oBitOrder=None):
 		self.N = N
 		self.isBase = True
 		self.isStub = True
 		self.entity = entity
 		self.scale = scale
-		self.delay1 = delay1
+		self.delay1 = delay
 		self.bitGrowth = bitGrowth
 		self.imports = [entity]
 		if iBitOrder == None:

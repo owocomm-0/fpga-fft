@@ -12,7 +12,7 @@ SCALE_DIV_N = 'SCALE_DIV_N'
 
 def fft2_serial(scale, bitGrowth=0):
 	delay = 6
-	return FFTBase(2, 'fft4_serial3',
+	return FFTBase(2, 'fft2_serial',
 					scale=scale,
 					delay=delay,
 					bitGrowth=bitGrowth)

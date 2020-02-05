@@ -104,7 +104,7 @@ begin
 	ph1_dup0 <= phase when rising_edge(clk);
 	ph1_dup1 <= phase when rising_edge(clk);
 
-	din1 <= din when rising_edge(clk);
+	din1 <= keepNBits(din, dataBits) when rising_edge(clk);
 	
 	bfInB <= din when ph1(0)='0' and rising_edge(clk);
 

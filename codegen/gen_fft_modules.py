@@ -109,6 +109,7 @@ class Multiplier:
 
 defaultMult = Multiplier('complexMultiply2', 5)
 largeMult = Multiplier('dsp48e1_complexMultiply', 9)
+gwMult18x18 = Multiplier('gwMult18x18', 4)
 
 
 class FFTBase:
